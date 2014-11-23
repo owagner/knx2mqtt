@@ -1,9 +1,16 @@
 package com.tellerulam.knx2mqtt;
 
+import java.util.*;
+
+import org.eclipse.paho.client.mqttv3.*;
+
 public class Main
 {
-	public static void main(String[] args)
+	static final Timer t=new Timer(true);
+
+	public static void main(String[] args) throws MqttException
 	{
+
 		/*
 		 * Interpret all command line arguments as property definitions (without the knx2mqtt prefix)
 		 */
@@ -17,6 +24,7 @@ public class Main
 			}
 			System.setProperty("knx2mqtt."+sp[0],sp[1]);
 		}
+		MQTTHandler.init();
 		KNXConnector.launch();
 	}
 }

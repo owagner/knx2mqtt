@@ -8,12 +8,15 @@ knx2mqtt is a gateway between a KNX bus interface and MQTT. It receives group te
 
 It's intended as a building block in heterogenous environments where an MQTT message broker is used as the centralized message bus.
 
+If you don't understand any of the above, knx2mqtt is most likely not useful to you.
+
 
 Prerequisites
 -------------
 
 * Java 1.7 SE Runtime Environment: https://www.java.com/
 * Calimero 2.2.0 or newer: https://github.com/calimero-project/calimero / https://www.auto.tuwien.ac.at/a-lab/calimero.html
+* Eclipse Paho: https://www.eclipse.org/paho/clients/java/
 
 
 EIBD
@@ -53,3 +56,15 @@ Examples:
   IP address (interface) to use for originating EIBnet/IP messages. No default, mainly useful
   in ROUTING mode to specify the multicast interface.
   
+- mqtt.broker
+
+  ServerURI of the MQTT broker to connect to. Defaults to "tcp://localhost:1883".
+  
+- mqtt.clientid
+
+  ClientID to use in the MQTT connection. Defaults to "knx2mqtt".
+  
+Changelog
+---------
+(work in progress)
+ 
