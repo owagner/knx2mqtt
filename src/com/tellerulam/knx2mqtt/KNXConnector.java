@@ -3,6 +3,8 @@ package com.tellerulam.knx2mqtt;
 import java.net.*;
 import java.util.logging.*;
 
+import com.tellerulam.knx2mqtt.GroupAddressManager.GroupAddressInfo;
+
 import tuwien.auto.calimero.*;
 import tuwien.auto.calimero.exception.*;
 import tuwien.auto.calimero.knxnetip.*;
@@ -109,6 +111,8 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 				return;
 			}
 
+			GroupAddressInfo gaInfo=GroupAddressManager.getGAInfoForAddress(dest.toString());
+
 			String val;
 			try
 			{
@@ -118,7 +122,14 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 					val=String.valueOf(asFloat(pe));
 				else
 					val="Unknown";
+
 				L.info("Got "+val+" to "+dest+" from "+src+" (ASDU length "+asdu.length+")");
+
+				if(gaInfo!=null)
+					MQTTHandler.publish(gaInfo.name,val,src.toString());
+				else
+					MQTTHandler.publish(dest.toString(),val,src.toString());
+
 			}
 			catch(KNXException e)
 			{

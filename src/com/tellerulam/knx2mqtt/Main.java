@@ -24,6 +24,7 @@ public class Main
 			}
 			System.setProperty("knx2mqtt."+sp[0],sp[1]);
 		}
+		GroupAddressManager.loadGroupAddressTable();
 		MQTTHandler.init();
 		KNXConnector.launch();
 	}

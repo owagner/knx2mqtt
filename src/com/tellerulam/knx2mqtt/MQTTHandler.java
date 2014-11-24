@@ -1,10 +1,13 @@
 package com.tellerulam.knx2mqtt;
 
+import java.nio.charset.*;
 import java.util.*;
 import java.util.logging.*;
 
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.*;
+
+import com.eclipsesource.json.*;
 
 public class MQTTHandler
 {
@@ -19,7 +22,10 @@ public class MQTTHandler
 	private final String topicPrefix;
 	private MQTTHandler()
 	{
-		topicPrefix=System.getProperty("knx2mqtt.mqtt.topic","knx/unspecified");
+		String tp=System.getProperty("knx2mqtt.mqtt.topic","knx/unspecified");
+		if(!tp.endsWith("/"))
+			tp+="/";
+		topicPrefix=tp;
 	}
 
 	private static MQTTHandler instance;
@@ -70,10 +76,10 @@ public class MQTTHandler
 				@Override
 				public void onSuccess(IMqttToken tok)
 				{
-					L.info("Successfully connected to broker, subscribing to "+topicPrefix+"/#");
+					L.info("Successfully connected to broker, subscribing to "+topicPrefix+"#");
 					try
 					{
-						mqttc.subscribe(topicPrefix+"/#",1);
+						mqttc.subscribe(topicPrefix+"#",1);
 						shouldBeConnected=true;
 					}
 					catch(MqttException mqe)
@@ -98,6 +104,27 @@ public class MQTTHandler
 		mqttc=new MqttAsyncClient(server,clientID,new MemoryPersistence());
 		doConnect();
 		Main.t.schedule(new StateChecker(),30*1000,30*1000);
+	}
+
+	private void doPublish(String name, String val, String src)
+	{
+		String txtmsg=new JsonObject().add("val",val).add("src",src).toString();
+		MqttMessage msg=new MqttMessage(txtmsg.getBytes(Charset.forName("UTF-8")));
+
+		try
+		{
+			mqttc.publish(topicPrefix+name, msg);
+			L.info("Published "+txtmsg+" to "+topicPrefix+name);
+		}
+		catch(MqttException e)
+		{
+			L.log(Level.WARNING,"Error when publishing message",e);
+		}
+	}
+
+	public static void publish(String name, String val, String src)
+	{
+		instance.doPublish(name,val,src);
 	}
 
 }
