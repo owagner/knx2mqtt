@@ -167,7 +167,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 			try
 			{
 				connect();
-				for(;;)
+				while(link.isOpen())
 					Thread.sleep(1000);
 			}
 			catch(Exception e)
