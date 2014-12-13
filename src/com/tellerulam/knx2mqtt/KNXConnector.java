@@ -196,4 +196,32 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 		conn=new KNXConnector();
 		conn.start();
 	}
+
+	public static void doGroupWrite(String gaspec,String val,String dp)
+	{
+		try
+		{
+			GroupAddress ga=new GroupAddress(gaspec);
+			if(dp==null)
+			{
+				// Guessing the datapoint type
+				if(val.indexOf('.')>=0)
+					conn.pc.write(ga, Float.parseFloat(val));
+				else
+				{
+					int v=Integer.parseInt(val);
+					if(v==0)
+						conn.pc.write(ga, false);
+					else if(v==1)
+						conn.pc.write(ga, true);
+					else
+						conn.pc.write(ga, v, ProcessCommunicationBase.SCALING );
+				}
+			}
+		}
+		catch(Exception e)
+		{
+			conn.L.log(Level.WARNING,"Error when writing "+val+" to "+gaspec,e);
+		}
+	}
 }

@@ -8,6 +8,7 @@ import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.*;
 
 import com.eclipsesource.json.*;
+import com.tellerulam.knx2mqtt.GroupAddressManager.GroupAddressInfo;
 
 public class MQTTHandler
 {
@@ -22,7 +23,7 @@ public class MQTTHandler
 	private final String topicPrefix;
 	private MQTTHandler()
 	{
-		String tp=System.getProperty("knx2mqtt.mqtt.topic","knx/unspecified");
+		String tp=System.getProperty("knx2mqtt.mqtt.topic","knx");
 		if(!tp.endsWith("/"))
 			tp+="/";
 		topicPrefix=tp;
@@ -59,6 +60,34 @@ public class MQTTHandler
 
 	private boolean shouldBeConnected;
 
+	void processMessage(String topic,MqttMessage msg)
+	{
+		if(msg.isRetained())
+		{
+			L.info("Ignoring retained message "+msg+" to "+topic);
+			return;
+		}
+		JsonObject data=JsonObject.readFrom(new String(msg.getPayload(),Charset.forName("UTF-8")));
+		JsonValue ack=data.get("ack");
+		if(ack!=null && ack.asBoolean())
+		{
+			L.info("Ignoring ack'ed message "+msg+" to "+topic);
+			return;
+		}
+		L.info("Received "+msg+" to "+topic);
+
+		// Now translate the topic into a group address
+		String namePart=topic.substring(topicPrefix.length(),topic.length());
+		GroupAddressInfo gai=GroupAddressManager.getGAInfoForName(namePart);
+		if(gai==null)
+		{
+			L.warning("Unable to translate name "+namePart+" into a group address, ignoring message "+msg);
+			return;
+		}
+		L.info("Name "+namePart+" translates to GA "+gai.address);
+		KNXConnector.doGroupWrite(gai.address, data.get("val").toString(), gai.dpt);
+	}
+
 	private void doConnect()
 	{
 		L.info("Connecting to MQTT broker "+mqttc.getServerURI()+" with CLIENTID="+mqttc.getClientId()+" and TOPIC PREFIX="+topicPrefix);
@@ -79,6 +108,31 @@ public class MQTTHandler
 					L.info("Successfully connected to broker, subscribing to "+topicPrefix+"#");
 					try
 					{
+						mqttc.setCallback(new MqttCallback() {
+							@Override
+							public void messageArrived(String topic, MqttMessage msg) throws Exception
+							{
+								try
+								{
+									processMessage(topic,msg);
+								}
+								catch(Exception e)
+								{
+									L.log(Level.WARNING,"Error when processing message "+msg+" for "+topic,e);
+								}
+							}
+							@Override
+							public void deliveryComplete(IMqttDeliveryToken token)
+							{
+								/* Intentionally ignored */
+							}
+							@Override
+							public void connectionLost(Throwable t)
+							{
+								L.log(Level.WARNING,"Connection to MQTT broker lost",t);
+								queueConnect();
+							}
+						});
 						mqttc.subscribe(topicPrefix+"#",1);
 						shouldBeConnected=true;
 					}
@@ -86,7 +140,6 @@ public class MQTTHandler
 					{
 						L.log(Level.WARNING,"Error subscribing to topic hierarchy, check your configuration",mqe);
 					}
-
 				}
 			});
 		}
@@ -108,9 +161,10 @@ public class MQTTHandler
 
 	private void doPublish(String name, String val, String src)
 	{
-		String txtmsg=new JsonObject().add("val",val).add("src",src).toString();
+		String txtmsg=new JsonObject().add("val",val).add("src",src).add("ack",true).toString();
 		MqttMessage msg=new MqttMessage(txtmsg.getBytes(Charset.forName("UTF-8")));
-
+		// Default QoS is 1, which is what we want
+		msg.setRetained(true);
 		try
 		{
 			mqttc.publish(topicPrefix+name, msg);

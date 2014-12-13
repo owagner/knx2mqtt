@@ -17,7 +17,7 @@ Prerequisites
 * Java 1.7 SE Runtime Environment: https://www.java.com/
 * Calimero 2.2.0 or newer: https://github.com/calimero-project/calimero / https://www.auto.tuwien.ac.at/a-lab/calimero.html (used for KNX communication)
 * Eclipse Paho: https://www.eclipse.org/paho/clients/java/ (used for MQTT communication)
-* Minimal-JSON: https://github.com/ralfstx/minimal-json / (used for JSON creation and parsing)
+* Minimal-JSON: https://github.com/ralfstx/minimal-json (used for JSON creation and parsing)
 
 
 EIBD
@@ -26,6 +26,29 @@ EIBD
 The Calimero library is able to directly talk to EIBnet/IP gateways or routers. However, knx2mqtt can be used in conjunction with 
 eibd if eibd is run as an EIBnet/IP server with option "-S". Note that this is not the same as eibd's proprietary TCP protocol
 which by default uses TCP port 6720.
+
+
+MQTT Message format
+--------------------
+
+The message format accepted and generated is a JSON encoded object with the following members:
+
+* val - the actual value, in numeric format
+* src - when sending message, knx2mqtt fills in the source EIB address of the group write which triggered the message.
+  This field is ignored on incoming messages.
+* ack - when sending messages, knx2mqtt sets this to _true_. If this is set to _true_ on incoming messages, they
+  are ignored, to avoid loops.
+ 
+ 
+DPT Guessing
+------------
+The interpretation of KNX values is not specified as part of the wire protocol, but done by the device configuration.
+This is called a Datapoint Type or DPT. knx2mqtt guesses the DPT of outgoing messages by looking at the numeric value:
+
+* if the value contains a dot, a 2 byte float is assumed
+* otherwise, if the value is 0, a boolean _false_ is assumed
+* otherwise, if the value is 1, a boolean _true_ is assumed
+* otherwise, a 8 bit scaled integer is assumed
 
 
 Usage

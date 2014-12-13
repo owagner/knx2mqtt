@@ -17,16 +17,24 @@ public class GroupAddressManager
 		return gaTable.get(address);
 	}
 
+	public static GroupAddressInfo getGAInfoForName(String name)
+	{
+		return gaByName.get(name);
+	}
+
 	public static class GroupAddressInfo
 	{
-		String name;
+		final String name;
+		final String address;
 		String dpt;
-		private GroupAddressInfo(String name)
+		private GroupAddressInfo(String name,String address)
 		{
 			this.name=name;
+			this.address=address;
 		}
 	}
 	static private final Map<String,GroupAddressInfo> gaTable=new HashMap<>();
+	static private final Map<String,GroupAddressInfo> gaByName=new HashMap<>();
 
 	static void loadGroupAddressTable()
 	{
@@ -66,9 +74,11 @@ public class GroupAddressManager
         	}
         	else if("GroupAddress".equals(sn.getNodeName()))
         	{
-            	String name=((Element)sn).getAttribute("Name");
+            	String name=prefix+((Element)sn).getAttribute("Name");
             	String addr=((Element)sn).getAttribute("Address");
-            	gaTable.put(addr,new GroupAddressInfo(prefix+name));
+            	GroupAddressInfo gai=new GroupAddressInfo(name,addr);
+            	gaTable.put(addr, gai);
+            	gaByName.put(name, gai);
         	}
         }
 	}
