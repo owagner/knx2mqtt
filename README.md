@@ -97,6 +97,10 @@ Examples:
 
   The topic prefix used for publishing and subscribing. Defaults to "knx/".
 
+
+See also
+--------
+- hm2mqtt - similiar tool for Homematic integration 
   
   
 Changelog
