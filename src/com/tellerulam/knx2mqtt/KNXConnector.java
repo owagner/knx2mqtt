@@ -123,7 +123,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 				else
 					val="Unknown";
 
-				L.info("Got "+val+" to "+dest+" from "+src+" (ASDU length "+asdu.length+")");
+				L.finest("Got "+val+" to "+dest+" from "+src+" (ASDU length "+asdu.length+")");
 
 				if(gaInfo!=null)
 					MQTTHandler.publish(gaInfo.name,val,src.toString());

@@ -64,17 +64,17 @@ public class MQTTHandler
 	{
 		if(msg.isRetained())
 		{
-			L.info("Ignoring retained message "+msg+" to "+topic);
+			L.finer("Ignoring retained message "+msg+" to "+topic);
 			return;
 		}
 		JsonObject data=JsonObject.readFrom(new String(msg.getPayload(),Charset.forName("UTF-8")));
 		JsonValue ack=data.get("ack");
 		if(ack!=null && ack.asBoolean())
 		{
-			L.info("Ignoring ack'ed message "+msg+" to "+topic);
+			L.finer("Ignoring ack'ed message "+msg+" to "+topic);
 			return;
 		}
-		L.info("Received "+msg+" to "+topic);
+		L.fine("Received "+msg+" to "+topic);
 
 		// Now translate the topic into a group address
 		String namePart=topic.substring(topicPrefix.length(),topic.length());
@@ -84,7 +84,7 @@ public class MQTTHandler
 			L.warning("Unable to translate name "+namePart+" into a group address, ignoring message "+msg);
 			return;
 		}
-		L.info("Name "+namePart+" translates to GA "+gai.address);
+		L.fine("Name "+namePart+" translates to GA "+gai.address);
 		KNXConnector.doGroupWrite(gai.address, data.get("val").toString(), gai.dpt);
 	}
 
@@ -93,9 +93,12 @@ public class MQTTHandler
 		L.info("Connecting to MQTT broker "+mqttc.getServerURI()+" with CLIENTID="+mqttc.getClientId()+" and TOPIC PREFIX="+topicPrefix);
 
 		MqttConnectOptions copts=new MqttConnectOptions();
+		copts.setWill(topicPrefix+"connected", "{ \"val\": false, \"ack\": true }".getBytes(), 1, true);
+		copts.setCleanSession(true);
 		try
 		{
 			mqttc.connect(copts);
+			mqttc.publish(topicPrefix+"connected", "{ \"val\": true, \"ack\": true }".getBytes(), 1, true);
 			L.info("Successfully connected to broker, subscribing to "+topicPrefix+"#");
 			try
 			{
@@ -151,7 +154,7 @@ public class MQTTHandler
 
 	private void doPublish(String name, String val, String src)
 	{
-		String txtmsg=new JsonObject().add("val",val).add("src",src).add("ack",true).toString();
+		String txtmsg=new JsonObject().add("val",val).add("knx_src_addr",src).add("ack",true).toString();
 		MqttMessage msg=new MqttMessage(txtmsg.getBytes(Charset.forName("UTF-8")));
 		// Default QoS is 1, which is what we want
 		msg.setRetained(true);

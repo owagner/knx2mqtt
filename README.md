@@ -1,6 +1,10 @@
 knx2mqtt
 ========
 
+  Written and (C) 2014 Oliver Wagner <owagner@tellerulam.com> 
+  
+  Provided under the terms of the MIT license.
+
 Overview
 --------
 
@@ -28,13 +32,21 @@ eibd if eibd is run as an EIBnet/IP server with option "-S". Note that this is n
 which by default uses TCP port 6720.
 
 
+Topics
+------
+
+A special topic is *prefix/connected*. It holds a boolean value which denotes whether the adapter is
+currently running. It's set to false on disconnect using a MQTT will.
+
+
+
 MQTT Message format
 --------------------
 
 The message format accepted and generated is a JSON encoded object with the following members:
 
 * val - the actual value, in numeric format
-* src - when sending message, knx2mqtt fills in the source EIB address of the group write which triggered the message.
+* knx_src_addr - when sending message, knx2mqtt fills in the source EIB address of the group write which triggered the message.
   This field is ignored on incoming messages.
 * ack - when sending messages, knx2mqtt sets this to _true_. If this is set to _true_ on incoming messages, they
   are ignored, to avoid loops.
