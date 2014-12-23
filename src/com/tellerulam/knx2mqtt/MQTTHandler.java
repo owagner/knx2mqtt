@@ -120,7 +120,7 @@ public class MQTTHandler
 
 	private void doInit() throws MqttException
 	{
-		String server=System.getProperty("knx2mqtt.mqtt.server","tcp://localhost:1833");
+		String server=System.getProperty("knx2mqtt.mqtt.server","tcp://localhost:1883");
 		String clientID=System.getProperty("knx2mqtt.mqtt.clientid","knx2mqtt");
 		mqttc=new MqttClient(server,clientID,new MemoryPersistence());
 		mqttc.setCallback(new MqttCallback() {
