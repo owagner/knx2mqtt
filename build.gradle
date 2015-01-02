@@ -1,0 +1,41 @@
+version = '0.2'
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+repositories {
+	mavenCentral()
+	maven { 
+		url 'https://repo.eclipse.org/content/repositories/paho-releases/'
+	} 
+}
+
+dependencies {
+	compile 'com.eclipsesource.minimal-json:minimal-json:0.9.1'
+	compile 'org.eclipse.paho:mqtt-client:0.4.0'
+	compile 'com.github.calimero:calimero-core:2.2-beta'
+}
+
+task listJars << {
+    configurations.compile.each { File file -> println file.name }
+}
+
+jar {
+	from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    manifest {
+        attributes 	'Main-Class': 'com.tellerulam.knx2mqtt.Main',
+        			'Implementation-Title': 'knx2mqtt KNX to MQTT bridge',
+                   	'Implementation-Version': version
+    }
+}
+
+uploadArchives {
+    repositories {
+       flatDir {
+           dirs 'build'
+       }
+    }
+}

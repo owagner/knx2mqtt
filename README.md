@@ -1,7 +1,7 @@
 knx2mqtt
 ========
 
-  Written and (C) 2014 Oliver Wagner <owagner@tellerulam.com> 
+  Written and (C) 2015 Oliver Wagner <owagner@tellerulam.com> 
   
   Provided under the terms of the MIT license.
 
@@ -15,8 +15,8 @@ It's intended as a building block in heterogenous smart home environments where 
 If you don't understand any of the above, knx2mqtt is most likely not useful to you.
 
 
-Prerequisites
--------------
+Dependencies
+------------
 
 * Java 1.7 SE Runtime Environment: https://www.java.com/
 * Calimero 2.2.0 or newer: https://github.com/calimero-project/calimero / https://www.auto.tuwien.ac.at/a-lab/calimero.html (used for KNX communication)
@@ -117,5 +117,7 @@ See also
   
 Changelog
 ---------
-(work in progress)
+* 0.2 - 2015/01/02
+  converted to Gradle build
+
  
