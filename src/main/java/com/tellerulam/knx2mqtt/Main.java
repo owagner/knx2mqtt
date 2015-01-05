@@ -7,7 +7,7 @@ import org.eclipse.paho.client.mqttv3.*;
 
 public class Main
 {
-	static public final String version="0.2";
+	static public final String version="0.3";
 
 	static final Timer t=new Timer(true);
 

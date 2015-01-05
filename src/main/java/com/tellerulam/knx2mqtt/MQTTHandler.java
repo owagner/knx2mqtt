@@ -85,7 +85,7 @@ public class MQTTHandler
 			return;
 		}
 		L.fine("Name "+namePart+" translates to GA "+gai.address);
-		KNXConnector.doGroupWrite(gai.address, data.get("val").toString(), gai.dpt);
+		KNXConnector.doGroupWrite(gai.address, data.get("val").asString(), gai.dpt);
 	}
 
 	private void doConnect()
@@ -152,10 +152,20 @@ public class MQTTHandler
 		Main.t.schedule(new StateChecker(),30*1000,30*1000);
 	}
 
-	private void doPublish(String name, String val, String src)
+	private static final Charset utf8=Charset.forName("UTF-8");
+
+	private void doPublish(String name, Object val, String src)
 	{
-		String txtmsg=new JsonObject().add("val",val).add("knx_src_addr",src).add("ack",true).toString();
-		MqttMessage msg=new MqttMessage(txtmsg.getBytes(Charset.forName("UTF-8")));
+		JsonObject jso=new JsonObject();
+		jso.add("knx_src_addr",src).add("ack",true);
+		if(val instanceof Integer)
+			jso.add("val",((Integer)val).intValue());
+		else if(val instanceof Float)
+			jso.add("val",((Float)val).floatValue());
+		else
+			jso.add("val",val.toString());
+		String txtmsg=jso.toString();
+		MqttMessage msg=new MqttMessage(jso.toString().getBytes(utf8));
 		// Default QoS is 1, which is what we want
 		msg.setRetained(true);
 		try
@@ -165,11 +175,11 @@ public class MQTTHandler
 		}
 		catch(MqttException e)
 		{
-			L.log(Level.WARNING,"Error when publishing message",e);
+			L.log(Level.WARNING,"Error when publishing message "+txtmsg,e);
 		}
 	}
 
-	public static void publish(String name, String val, String src)
+	public static void publish(String name, Object val, String src)
 	{
 		instance.doPublish(name,val,src);
 	}

@@ -113,13 +113,13 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 
 			GroupAddressInfo gaInfo=GroupAddressManager.getGAInfoForAddress(dest.toString());
 
-			String val;
+			Object val;
 			try
 			{
 				if(asdu.length==1)
-					val=String.valueOf(asUnsigned(pe, ProcessCommunicationBase.UNSCALED));
+					val=Integer.valueOf(asUnsigned(pe, ProcessCommunicationBase.UNSCALED));
 				else if(asdu.length==2||asdu.length==4)
-					val=String.valueOf(asFloat(pe));
+					val=Float.valueOf(asFloat(pe));
 				else
 					val="Unknown";
 
@@ -205,10 +205,13 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 			if(dp==null)
 			{
 				// Guessing the datapoint type
-				if(val.indexOf('.')>=0)
+				int dot=val.indexOf('.');
+				if(dot>=0 && Integer.parseInt(val.substring(dot+1))!=0)
 					conn.pc.write(ga, Float.parseFloat(val));
 				else
 				{
+					if(dot>=0)
+						val=val.substring(0,dot);
 					int v=Integer.parseInt(val);
 					if(v==0)
 						conn.pc.write(ga, false);

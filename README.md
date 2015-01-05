@@ -11,8 +11,7 @@ Overview
 knx2mqtt is a gateway between a KNX bus interface and MQTT. It receives group telegrams and publishes them as MQTT topics, and similarily subscribes to MQTT topics and converts them into KNX group writes.
 
 It's intended as a building block in heterogenous smart home environments where an MQTT message broker is used as the centralized message bus.
-
-If you don't understand any of the above, knx2mqtt is most likely not useful to you.
+See https://github.com/mqtt-smarthome for a rationale and architectural overview.
 
 
 Dependencies
@@ -57,7 +56,7 @@ DPT Guessing
 The interpretation of KNX values is not specified as part of the wire protocol, but done by the device configuration.
 This is called a Datapoint Type or DPT. knx2mqtt guesses the DPT of outgoing messages by looking at the numeric value:
 
-* if the value contains a dot, a 2 byte float is assumed
+* if the value contains a decimal point and has a fractional part, a 2 byte float is assumed
 * otherwise, if the value is 0, a boolean _false_ is assumed
 * otherwise, if the value is 1, a boolean _true_ is assumed
 * otherwise, a 8 bit scaled integer is assumed
@@ -112,12 +111,16 @@ Examples:
 
 See also
 --------
-- hm2mqtt - similiar tool for Homematic integration 
+- Project overview: https://github.com/mqtt-smarthome
   
   
 Changelog
 ---------
-* 0.2 - 2015/01/02
-  converted to Gradle build
+* 0.2 - 2015/01/02 - owagner
+  - converted to Gradle build
+* 0.3 - 2015/01/05 - owagner
+  - make sure numeric values are not sent as strings
+  - change type guessing to send integer numbers not as floats if they have a decimal point, but no fractional part
+    
 
  
