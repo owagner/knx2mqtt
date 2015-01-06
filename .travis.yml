@@ -1,0 +1,13 @@
+language: java
+before_deploy: gradle jar
+deploy:
+  provider: releases
+  api_key:
+    secure: ZAmrjXcrtDt2sqb+HaWChJKtYq/F1t0wBHljQbARG92idkIVv/+DpuHts1v1TpfbAims/+chkt31COBa/GojqYgsh5KkTK6HoV4WUjyA2FcBKzph69+4MfxyNGOqkqaf+g250AfANwnLRSoGZVD/GSR0UiUohaWC2X96U4oOZ9w=
+  file: "build/libs/knx2mqtt.jar"
+  skip_cleanup: true
+  on:
+    repo: mqtt-smarthome/knx2mqtt
+    tags: true
+    all_branches: true
+
