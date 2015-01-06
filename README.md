@@ -7,7 +7,6 @@ knx2mqtt
 
 Overview
 --------
-
 knx2mqtt is a gateway between a KNX bus interface and MQTT. It receives group telegrams and publishes them as MQTT topics, and similarily subscribes to MQTT topics and converts them into KNX group writes.
 
 It's intended as a building block in heterogenous smart home environments where an MQTT message broker is used as the centralized message bus.
@@ -16,16 +15,16 @@ See https://github.com/mqtt-smarthome for a rationale and architectural overview
 
 Dependencies
 ------------
-
 * Java 1.7 SE Runtime Environment: https://www.java.com/
 * Calimero 2.2.0 or newer: https://github.com/calimero-project/calimero / https://www.auto.tuwien.ac.at/a-lab/calimero.html (used for KNX communication)
 * Eclipse Paho: https://www.eclipse.org/paho/clients/java/ (used for MQTT communication)
 * Minimal-JSON: https://github.com/ralfstx/minimal-json (used for JSON creation and parsing)
 
+[![Build Status](https://travis-ci.org/mqtt-smarthome/knx2mqtt.svg)](https://travis-ci.org/mqtt-smarthome/knx2mqtt)
+
 
 EIBD
 ----
-
 The Calimero library is able to directly talk to EIBnet/IP gateways or routers. However, knx2mqtt can be used in conjunction with 
 eibd if eibd is run as an EIBnet/IP server with option "-S". Note that this is not the same as eibd's proprietary TCP protocol
 which by default uses TCP port 6720.
@@ -33,7 +32,6 @@ which by default uses TCP port 6720.
 
 Topics
 ------
-
 A special topic is *prefix/connected*. It holds a boolean value which denotes whether the adapter is
 currently running. It's set to false on disconnect using a MQTT will.
 
@@ -41,7 +39,6 @@ currently running. It's set to false on disconnect using a MQTT will.
 
 MQTT Message format
 --------------------
-
 The message format accepted and generated is a JSON encoded object with the following members:
 
 * val - the actual value, in numeric format
@@ -64,7 +61,6 @@ This is called a Datapoint Type or DPT. knx2mqtt guesses the DPT of outgoing mes
 
 Usage
 -----
-
 Configuration options can either be specified on the command line, or as system properties with the prefix "knx2mqtt".
 Examples:
 
