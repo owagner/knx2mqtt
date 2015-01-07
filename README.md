@@ -20,7 +20,7 @@ Dependencies
 * Eclipse Paho: https://www.eclipse.org/paho/clients/java/ (used for MQTT communication)
 * Minimal-JSON: https://github.com/ralfstx/minimal-json (used for JSON creation and parsing)
 
-[![Build Status](https://travis-ci.org/mqtt-smarthome/knx2mqtt.svg)](https://travis-ci.org/mqtt-smarthome/knx2mqtt)
+[![Build Status](https://travis-ci.org/mqtt-smarthome/knx2mqtt.svg)](https://travis-ci.org/mqtt-smarthome/knx2mqtt) Automatically built jars can be downloaded from the release page on GitHub at https://github.com/mqtt-smarthome/knx2mqtt/releases
 
 
 EIBD
