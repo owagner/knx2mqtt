@@ -32,14 +32,13 @@ which by default uses TCP port 6720.
 
 Topics
 ------
-A special topic is *prefix/connected*. It holds a boolean value which denotes whether the adapter is
-currently running. It's set to false on disconnect using a MQTT will.
-
+A special topic is *prefix/connected*. It holds an enum value which denotes whether the adapter is
+currently running (1) and connected to the KNX bus (2). It's set to 0 on disconnect using a MQTT will.
 
 
 MQTT Message format
 --------------------
-The message format accepted and generated is a JSON encoded object with the following members:
+The message format generated is a JSON encoded object with the following members:
 
 * val - the actual value, in numeric format
 * knx_src_addr - when sending message, knx2mqtt fills in the source EIB address of the group write which triggered the message.
@@ -76,7 +75,7 @@ Examples:
 
 - knx.ip
   
-  IP address of the EIBnet/IP server/gateway (no default)
+  IP address of the EIBnet/IP server/gateway (no default, must be specified)
   
 - knx.port
 
@@ -117,6 +116,10 @@ Changelog
 * 0.3 - 2015/01/05 - owagner
   - make sure numeric values are not sent as strings
   - change type guessing to send integer numbers not as floats if they have a decimal point, but no fractional part
-    
+* 0.4 - 2015/01/25 - owagner
+  - adapted to new mqtt-smarthome topic hierarchies: /status/ for reports, /set/ for setting values
+  - prefix/connected is now an enum as suggested by new mqtt-smarthome spec
+  - use QoS 0 for published status reports
+      
 
  

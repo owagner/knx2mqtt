@@ -40,6 +40,8 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 		if(knxConnectionType!=-1)
 			connectIP(knxConnectionType);
 
+		MQTTHandler.setKNXConnectionState(true);
+
 		link.addLinkListener(this);
 		pc=new ProcessCommunicatorImpl(link);
 		pc.addProcessListener(processListener);
@@ -89,6 +91,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 	public void linkClosed(CloseEvent ce)
 	{
 		L.info("Link closed: "+ce.getReason());
+		MQTTHandler.setKNXConnectionState(false);
 	}
 
 	@Override
@@ -141,7 +144,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 		@Override
 		public void detached(DetachEvent arg0)
 		{
-			/* Ignoer */
+			/* Ignore */
 		}
 
 		@Override

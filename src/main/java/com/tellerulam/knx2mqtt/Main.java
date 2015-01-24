@@ -1,15 +1,43 @@
 package com.tellerulam.knx2mqtt;
 
+import java.io.*;
+import java.nio.charset.*;
+import java.nio.file.*;
 import java.util.*;
 import java.util.logging.*;
+import java.util.regex.*;
 
 import org.eclipse.paho.client.mqttv3.*;
 
 public class Main
 {
-	static public final String version="0.3";
-
 	static final Timer t=new Timer(true);
+
+	private static String getVersion()
+	{
+		// First, try the manifest tag
+		String version=Main.class.getPackage().getImplementationVersion();
+		if(version==null)
+		{
+			// Read from build.gradle instead
+			try
+			{
+				List<String> buildFile=Files.readAllLines(Paths.get("build.gradle"),StandardCharsets.UTF_8);
+				Pattern p=Pattern.compile("version.*=.*'([^']+)");
+				for(String l:buildFile)
+				{
+					Matcher m=p.matcher(l);
+					if(m.find())
+						return m.group(1);
+				}
+			}
+			catch(IOException e)
+			{
+				/* Ignore, no version */
+			}
+		}
+		return version;
+	}
 
 	public static void main(String[] args) throws MqttException
 	{
@@ -26,7 +54,7 @@ public class Main
 			}
 			System.setProperty("knx2mqtt."+sp[0],sp[1]);
 		}
-		Logger.getLogger(Main.class.getName()).info("knx2mqtt V"+version+" (C) 2015 Oliver Wagner <owagner@tellerulam.com>");
+		Logger.getLogger(Main.class.getName()).info("knx2mqtt V"+getVersion()+" (C) 2015 Oliver Wagner <owagner@tellerulam.com>");
 		GroupAddressManager.loadGroupAddressTable();
 		MQTTHandler.init();
 		KNXConnector.launch();
