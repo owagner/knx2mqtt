@@ -55,6 +55,7 @@ public class Main
 			System.setProperty("knx2mqtt."+sp[0],sp[1]);
 		}
 		Logger.getLogger(Main.class.getName()).info("knx2mqtt V"+getVersion()+" (C) 2015 Oliver Wagner <owagner@tellerulam.com>");
+		GroupAddressManager.loadETS4Project();
 		GroupAddressManager.loadGroupAddressTable();
 		MQTTHandler.init();
 		KNXConnector.launch();

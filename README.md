@@ -111,15 +111,17 @@ See also
   
 Changelog
 ---------
-* 0.2 - 2015/01/02 - owagner
-  - converted to Gradle build
+* 0.4 - 2015/01/25 - owagner
+  - adapted to new mqtt-smarthome topic hierarchy scheme: /status/ for reports, /set/ for setting values
+  - prefix/connected is now an enum (0 - disconnected, 1 - connected to broker, 2 - connected to KNX bus)
+  - use QoS 0 for published status reports
+
 * 0.3 - 2015/01/05 - owagner
   - make sure numeric values are not sent as strings
   - change type guessing to send integer numbers not as floats if they have a decimal point, but no fractional part
-* 0.4 - 2015/01/25 - owagner
-  - adapted to new mqtt-smarthome topic hierarchies: /status/ for reports, /set/ for setting values
-  - prefix/connected is now an enum as suggested by new mqtt-smarthome spec
-  - use QoS 0 for published status reports
+  
+* 0.2 - 2015/01/02 - owagner
+  - converted to Gradle build
       
 
  
