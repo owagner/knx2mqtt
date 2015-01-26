@@ -116,23 +116,34 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 
 			GroupAddressInfo gaInfo=GroupAddressManager.getGAInfoForAddress(dest.toString());
 
-			Object val;
 			try
 			{
-				if(asdu.length==1)
-					val=Integer.valueOf(asUnsigned(pe, ProcessCommunicationBase.UNSCALED));
-				else if(asdu.length==2||asdu.length==4)
-					val=Float.valueOf(asFloat(pe));
+				Object val;
+				if(gaInfo==null)
+				{
+					String dpt;
+					if(asdu.length==1)
+					{
+						val=Integer.valueOf(asUnsigned(pe, ProcessCommunicationBase.UNSCALED));
+						dpt="5.004";
+					}
+					else if(asdu.length==2)
+					{
+						val=Float.valueOf(asFloat(pe));
+						dpt="9.001";
+					}
+					else
+					{
+						val="Unknown";
+						dpt="0.000";
+					}
+					L.info("Got "+val+" to unknown "+dest+" from "+src+" (ASDU length "+asdu.length+")");
+					MQTTHandler.publish(dest.toString(),val,src.toString(),dpt);
+				}
 				else
-					val="Unknown";
-
-				L.finest("Got "+val+" to "+dest+" from "+src+" (ASDU length "+asdu.length+")");
-
-				if(gaInfo!=null)
-					MQTTHandler.publish(gaInfo.name,val,src.toString());
-				else
-					MQTTHandler.publish(dest.toString(),val,src.toString());
-
+				{
+					MQTTHandler.publish(gaInfo.name,gaInfo.translate(asdu),src.toString(),gaInfo.dpt);
+				}
 			}
 			catch(KNXException e)
 			{

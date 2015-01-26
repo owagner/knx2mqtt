@@ -152,10 +152,10 @@ public class MQTTHandler
 		Main.t.schedule(new StateChecker(),30*1000,30*1000);
 	}
 
-	private void doPublish(String name, Object val, String src)
+	private void doPublish(String name, Object val, String src,String dpt)
 	{
 		JsonObject jso=new JsonObject();
-		jso.add("knx_src_addr",src).add("ack",true);
+		jso.add("knx_src_addr",src).add("knx_dpt",dpt);
 		if(val instanceof Integer)
 			jso.add("val",((Integer)val).intValue());
 		else if(val instanceof Float)
@@ -190,9 +190,9 @@ public class MQTTHandler
 		}
 	}
 
-	public static void publish(String name, Object val, String src)
+	public static void publish(String name, Object val, String src,String dpt)
 	{
-		instance.doPublish(name,val,src);
+		instance.doPublish(name,val,src,dpt);
 	}
 
 }
