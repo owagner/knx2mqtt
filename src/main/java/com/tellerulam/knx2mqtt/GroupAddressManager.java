@@ -40,6 +40,11 @@ public class GroupAddressManager
 			this.name=name;
 			this.address=address;
 		}
+		@Override
+		public String toString()
+		{
+			return "{"+name+"|"+dpt+"}";
+		}
 		void createTranslator() throws KNXException
 		{
 			xlator=TranslatorTypes.createTranslator(0, dpt);
@@ -169,6 +174,39 @@ public class GroupAddressManager
 		docCache=null;
 	}
 
+	private static void storeGAInfo(String address,String name,String datapointType)
+	{
+		String ga=new GroupAddress(Integer.parseInt(address)).toString();
+
+		GroupAddressInfo gai=gaTable.get(ga);
+		if(gai==null)
+		{
+			gai=new GroupAddressInfo(name, ga);
+			gaTable.put(ga,gai);
+			gaByName.put(name,gai);
+		}
+		Pattern p=Pattern.compile("DPST-([0-9]+)(-([0-9]+))?");
+		Matcher m=p.matcher(datapointType);
+		if(!m.find())
+			throw new IllegalArgumentException("Unparsable DPST '"+datapointType+"'");
+		StringBuilder dptBuilder=new StringBuilder();
+		dptBuilder.append(m.group(1));
+		dptBuilder.append('.');
+		String suffix=m.group(3);
+		if(suffix==null)
+		{
+			dptBuilder.append("001");
+		}
+		else
+		{
+			int suffixLength=suffix.length();
+			while(suffixLength++<3)
+				dptBuilder.append('0');
+			dptBuilder.append(suffix);
+		}
+		gai.dpt=dptBuilder.toString();
+	}
+
 	/*
 	 * First step in parsing: find the GroupAddresses and their IDs
 	 */
@@ -181,18 +219,44 @@ public class GroupAddressManager
         for(int ix=0;ix<gas.getLength();ix++)
         {
         	Element e=(Element)gas.item(ix);
-        	processETS4GroupAddress(zf,doc,docBuilder,
+
+        	// Resolve the full "path" name of the group by going upwards in the GroupRanges
+        	String name=null;
+        	for(Element pe=e;;)
+        	{
+        		if(name==null)
+        			name=pe.getAttribute("Name");
+        		else
+        			name=pe.getAttribute("Name")+"/"+name;
+
+        		pe=(Element)pe.getParentNode();
+        		if(!"GroupRange".equals(pe.getNodeName()))
+        			break;
+        	}
+
+        	String address=e.getAttribute("Address");
+
+        	// If we're lucky, the DPT is already specified here
+        	String dpt=e.getAttribute("DatapointType");
+        	if(dpt.length()!=0)
+        	{
+        		storeGAInfo(address, name, dpt);
+        		continue;
+        	}
+
+        	// We're not lucky. Look into the connections
+        	processETS4GroupAddressConnections(zf,doc,docBuilder,
         		e.getAttribute("Id"),
-        		e.getAttribute("Address"),
-        		e.getAttribute("Name")
+        		address,
+        		name
         	);
         }
 	}
 
 	/*
-	 * ...then find out what is connected to this group address
+	 * Find out what is connected to this group address
 	 */
-	private static void processETS4GroupAddress(ZipFile zf, Document doc,DocumentBuilder docBuilder, String id, String address, String name) throws SAXException, IOException
+	private static void processETS4GroupAddressConnections(ZipFile zf, Document doc,DocumentBuilder docBuilder, String id, String address, String name) throws SAXException, IOException
 	{
 		final String connectTypes[]=new String[]{"Send","Receive"};
 		boolean foundConnection=false,foundDPT=false;
@@ -211,6 +275,15 @@ public class GroupAddressManager
 	        			continue;
         			}
 	        		foundConnection=true;
+
+	        		/* Perhaps we're lucky and someone specified it in the CombObjectInstanceRef? */
+	        		String dpt=e.getAttribute("DatapointType");
+	        		if(dpt.length()!=0)
+	        		{
+	        			storeGAInfo(address, name, dpt);
+	        			return;
+	        		}
+	        		/* No luck, no luck. Dig deeper */
 	        		if(processETS4GroupConnection(zf, doc, docBuilder, pe.getAttribute("RefId"),id, address, name))
 	        			foundDPT=true;
 	        		return;
@@ -218,7 +291,7 @@ public class GroupAddressManager
 	        }
 		}
 		if(!foundConnection)
-			L.info("Group "+id+"/"+address+"/"+name+" does not seem to be connected to anywhere");
+			L.info("Group "+id+"/"+address+"/"+name+" does not seem to be connected to anywhere, ignoring it");
 		else if(!foundDPT)
 			throw new IllegalArgumentException("Unable to determine datapoint type for "+id);
 	}
@@ -259,82 +332,73 @@ public class GroupAddressManager
 		Element cobjref=mdoc.getElementById(refId);
 		if(cobjref==null)
 			throw new IllegalArgumentException("Unable to find ComObjectRef with Id "+refId+" in "+pathName);
+		// Perhaps the ComObjectRef
+		if(processETS4ComObj(cobjref,zf,doc,docBuilder,address,name))
+			return true;
+
 		String refco=cobjref.getAttribute("RefId");
 		Element cobj=mdoc.getElementById(refco);
 		if(cobj==null)
 			throw new IllegalArgumentException("Unable to find ComObject with Id "+refco+" in "+pathName);
 
-		String dpitid=cobjref.getAttribute("DatapointType");
+		if(processETS4ComObj(cobj,zf,doc,docBuilder,address,name))
+			return true;
+
+		return false;
+	}
+
+	private static boolean processETS4ComObj(Element cobj, ZipFile zf, Document doc, DocumentBuilder docBuilder, String address, String name) throws SAXException, IOException
+	{
+		String dpt=cobj.getAttribute("DatapointType");
+		if(dpt.length()!=0)
+		{
+			storeGAInfo(address, name, dpt);
+			return true;
+		}
 		String objSize=cobj.getAttribute("ObjectSize");
-
-		boolean sizeGuessed=false;
-
-		Pattern p=Pattern.compile("DPST-([0-9]+)-([0-9]+)");
-		Matcher m=p.matcher(dpitid);
-		if(m.find())
+		if(objSize.length()!=0)
 		{
-			StringBuilder dptBuilder=new StringBuilder();
-			dptBuilder.append(m.group(1));
-			dptBuilder.append('.');
-			String suffix=m.group(2);
-			int suffixLength=suffix.length();
-			while(suffixLength++<3)
-				dptBuilder.append('0');
-			dptBuilder.append(suffix);
-			dpitid=dptBuilder.toString();
-		}
-		else
-		{
-			// Take a guess based on size
-			dpitid=null;
-			// Some standard things
-			if("1 Bit".equals(objSize))
-				dpitid="1.001";
-			else if("1 Byte".equals(objSize))
-				dpitid="5.001";
-			else if("2 Bytes".equals(objSize))
-				dpitid="9.001";
-			else
-			{
-				// Look up in knx_master table
-				Document master=getDocument(zf, docBuilder, "knx_master.xml");
-				NodeList allDPs=master.getElementsByTagName("DatapointType");
-				String sizeSpec[]=objSize.split(" ");
-				String bits=sizeSpec[0];
-				if(sizeSpec[1].startsWith("Byte"))
-					bits=String.valueOf(Integer.parseInt(bits)*8);
-				for(int ix=0;ix<allDPs.getLength();ix++)
-				{
-					Element e=(Element)allDPs.item(ix);
-					String dpSize=e.getAttribute("SizeInBit");
-					if(bits.equals(dpSize))
-					{
-						String number=e.getAttribute("Number");
-						dpitid=number+".001";
-						// Found
-						break;
-					}
-				}
-				sizeGuessed=true;
-			}
-		}
-		if(dpitid!=null)
-		{
-			String ga=new GroupAddress(Integer.parseInt(address)).toString();
-
-			GroupAddressInfo gai=gaTable.get(ga);
-			if(gai==null)
-			{
-				gai=new GroupAddressInfo(name, ga);
-				gaTable.put(ga,gai);
-				gaByName.put(name,gai);
-			}
-
-			if(!sizeGuessed || gai.dpt==null)
-				gai.dpt=dpitid;
-
+			// "1 Bit" is pretty unambigious -- no warning for that
+			if(!"1 Bit".equals(objSize))
+				L.warning("Warning: Infering DPT for "+new GroupAddress(Integer.parseInt(address))+" ("+name+") by objSize "+objSize+" - this is not good, please update your ETS4 project with proper DPT specifications!");
+			storeGAInfo(address, name, inferDPTFromObjectSize(zf, docBuilder, objSize));
 			return true;
 		}
 		return false;
+	}
+
+	private static String inferDPTFromObjectSize(ZipFile zf, DocumentBuilder docBuilder, String objSize) throws SAXException, IOException
+	{
+		// Take a guess based on size
+		String dpitid=null;
+		// Some standard things
+		if("1 Bit".equals(objSize))
+			dpitid="1-1";
+		else if("1 Byte".equals(objSize))
+			dpitid="5-1";
+		else if("2 Bytes".equals(objSize))
+			dpitid="9-1";
+		else
+		{
+			// Look up in knx_master table
+			Document master=getDocument(zf, docBuilder, "knx_master.xml");
+			NodeList allDPs=master.getElementsByTagName("DatapointType");
+			String sizeSpec[]=objSize.split(" ");
+			String bits=sizeSpec[0];
+			if(sizeSpec[1].startsWith("Byte"))
+				bits=String.valueOf(Integer.parseInt(bits)*8);
+			for(int ix=0;ix<allDPs.getLength();ix++)
+			{
+				Element e=(Element)allDPs.item(ix);
+				String dpSize=e.getAttribute("SizeInBit");
+				if(bits.equals(dpSize))
+				{
+					// Find the first subtype
+					Element subType=(Element)e.getElementsByTagName("DatapointSubtype").item(0);
+					return subType.getAttribute("Id");
+				}
+			}
+		}
+		return "DPST-"+dpitid;
 	}
 }

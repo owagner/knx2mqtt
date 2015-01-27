@@ -76,7 +76,7 @@ public class MQTTHandler
 		}
 		L.fine("Name "+namePart+" translates to GA "+gai.address);
 		String data=new String(msg.getPayload(),StandardCharsets.UTF_8);
-		KNXConnector.doGroupWrite(gai.address, data, gai.dpt);
+		KNXConnector.doGroupWrite(gai.address, data, gai);
 	}
 
 	void processMessage(String topic,MqttMessage msg)
@@ -152,10 +152,12 @@ public class MQTTHandler
 		Main.t.schedule(new StateChecker(),30*1000,30*1000);
 	}
 
-	private void doPublish(String name, Object val, String src,String dpt)
+	private void doPublish(String name, Object val, String src,String dpt,String textual)
 	{
 		JsonObject jso=new JsonObject();
 		jso.add("knx_src_addr",src).add("knx_dpt",dpt);
+		if(textual!=null)
+			jso.add("knx_textual",textual);
 		if(val instanceof Integer)
 			jso.add("val",((Integer)val).intValue());
 		else if(val instanceof Float)
@@ -190,9 +192,9 @@ public class MQTTHandler
 		}
 	}
 
-	public static void publish(String name, Object val, String src,String dpt)
+	public static void publish(String name, Object val, String src,String dpt,String textual)
 	{
-		instance.doPublish(name,val,src,dpt);
+		instance.doPublish(name,val,src,dpt,textual);
 	}
 
 }

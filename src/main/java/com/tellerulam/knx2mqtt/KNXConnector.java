@@ -6,6 +6,7 @@ import java.util.logging.*;
 import com.tellerulam.knx2mqtt.GroupAddressManager.GroupAddressInfo;
 
 import tuwien.auto.calimero.*;
+import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.exception.*;
 import tuwien.auto.calimero.knxnetip.*;
 import tuwien.auto.calimero.link.*;
@@ -138,11 +139,11 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 						dpt="0.000";
 					}
 					L.info("Got "+val+" to unknown "+dest+" from "+src+" (ASDU length "+asdu.length+")");
-					MQTTHandler.publish(dest.toString(),val,src.toString(),dpt);
+					MQTTHandler.publish(dest.toString(),val,src.toString(),dpt,null);
 				}
 				else
 				{
-					MQTTHandler.publish(gaInfo.name,gaInfo.translate(asdu),src.toString(),gaInfo.dpt);
+					MQTTHandler.publish(gaInfo.name,gaInfo.translate(asdu),src.toString(),gaInfo.dpt,null);
 				}
 			}
 			catch(KNXException e)
@@ -211,12 +212,33 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 		conn.start();
 	}
 
-	public static void doGroupWrite(String gaspec,String val,String dp)
+	/* This is straight from Calimero / ProcessCommunicatorImpl */
+	private static final int GROUP_WRITE = 0x80;
+	private static byte[] createGroupAPDU(final int service, final DPTXlator t)
+	{
+		// check for group read
+		if (service == 0x00)
+			return new byte[2];
+		// only group response and group write are allowed
+		if (service != 0x40 && service != 0x80)
+			throw new KNXIllegalArgumentException("not an APDU group service");
+		// determine if data starts at byte offset 1 (optimized) or 2 (default)
+		final int offset = t.getItems() == 1 && t.getTypeSize() == 0 ? 1 : 2;
+		final byte[] buf = new byte[t.getItems() * Math.max(1, t.getTypeSize()) + offset];
+		buf[0] = (byte) (service >> 8);
+		buf[1] = (byte) service;
+		return t.getData(buf, offset);
+	}
+
+	public static void doGroupWrite(String gaspec,String val,GroupAddressInfo gai)
 	{
 		try
 		{
 			GroupAddress ga=new GroupAddress(gaspec);
-			if(dp==null)
+			gai.xlator.setValue(val);
+			conn.link.sendRequestWait(ga, Priority.LOW, createGroupAPDU(GROUP_WRITE, gai.xlator));
+
+			/*if(dp==null)
 			{
 				// Guessing the datapoint type
 				int dot=val.indexOf('.');
@@ -234,7 +256,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 					else
 						conn.pc.write(ga, v, ProcessCommunicationBase.SCALING );
 				}
-			}
+			}*/
 		}
 		catch(Exception e)
 		{
