@@ -78,6 +78,14 @@ public class GroupAddressManager
 				}
 			}
 		}
+		public String getTextutal()
+		{
+			String textual;
+			xlator.setAppendUnit(true);;
+			textual=xlator.getValue();
+			xlator.setAppendUnit(false);
+			return textual;
+		}
 	}
 	static private final Map<String,GroupAddressInfo> gaTable=new HashMap<>();
 	static private final Map<String,GroupAddressInfo> gaByName=new HashMap<>();
@@ -137,7 +145,7 @@ public class GroupAddressManager
 	 */
 	static void loadETS4Project()
 	{
-		String gaFile=System.getProperty("knx2mqtt.knx.projectfile");
+		String gaFile=System.getProperty("knx2mqtt.knx.ets4projectfile");
 		if(gaFile==null)
 		{
 			L.config("No project file specified");

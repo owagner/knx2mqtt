@@ -6,7 +6,7 @@ import java.util.logging.*;
 import com.tellerulam.knx2mqtt.GroupAddressManager.GroupAddressInfo;
 
 import tuwien.auto.calimero.*;
-import tuwien.auto.calimero.dptxlator.DPTXlator;
+import tuwien.auto.calimero.dptxlator.*;
 import tuwien.auto.calimero.exception.*;
 import tuwien.auto.calimero.knxnetip.*;
 import tuwien.auto.calimero.link.*;
@@ -74,7 +74,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 		}
 		L.log(Level.INFO,"Establishing KNX IP connection to "+hostIP+":"+port+" ("+(knxConnectionType==KNXNetworkLinkIP.TUNNELING?"TUNNEL":"ROUTER")+") from "+local);
 		link=new KNXNetworkLinkIP(knxConnectionType, local, new InetSocketAddress(hostIP, port), false, TPSettings.TP1);
-		L.info("Connection established");
+		L.info("KNX IP Connection established");
 	}
 
 	private void connectSerial()
@@ -143,7 +143,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 				}
 				else
 				{
-					MQTTHandler.publish(gaInfo.name,gaInfo.translate(asdu),src.toString(),gaInfo.dpt,null);
+					MQTTHandler.publish(gaInfo.name,gaInfo.translate(asdu),src.toString(),gaInfo.dpt,gaInfo.getTextutal());
 				}
 			}
 			catch(KNXException e)
@@ -235,28 +235,20 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 		try
 		{
 			GroupAddress ga=new GroupAddress(gaspec);
-			gai.xlator.setValue(val);
-			conn.link.sendRequestWait(ga, Priority.LOW, createGroupAPDU(GROUP_WRITE, gai.xlator));
 
-			/*if(dp==null)
+			// We do special handling for booleans
+			if(gai.xlator instanceof DPTXlatorBoolean)
 			{
-				// Guessing the datapoint type
-				int dot=val.indexOf('.');
-				if(dot>=0 && Integer.parseInt(val.substring(dot+1))!=0)
-					conn.pc.write(ga, Float.parseFloat(val));
+				if("0".equals(val))
+					((DPTXlatorBoolean)gai.xlator).setValue(false);
+				else if("1".equals(val))
+					((DPTXlatorBoolean)gai.xlator).setValue(true);
 				else
-				{
-					if(dot>=0)
-						val=val.substring(0,dot);
-					int v=Integer.parseInt(val);
-					if(v==0)
-						conn.pc.write(ga, false);
-					else if(v==1)
-						conn.pc.write(ga, true);
-					else
-						conn.pc.write(ga, v, ProcessCommunicationBase.SCALING );
-				}
-			}*/
+					gai.xlator.setValue(val);
+			}
+			else
+				gai.xlator.setValue(val);
+			conn.link.sendRequestWait(ga, Priority.LOW, createGroupAPDU(GROUP_WRITE, gai.xlator));
 		}
 		catch(Exception e)
 		{

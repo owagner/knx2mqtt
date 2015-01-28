@@ -32,6 +32,11 @@ which by default uses TCP port 6720.
 
 Topics
 ------
+knx2mqtt uses the group address hierarchy as defined in ETS4 for topics. The group addresses are translated to
+hierarchical group names if a ETS4 project file is specifed. Example
+
+	knx/set/Keller/Beleuchtung/Kellerflur Schalten
+
 A special topic is *prefix/connected*. It holds an enum value which denotes whether the adapter is
 currently running (1) and connected to the KNX bus (2). It's set to 0 on disconnect using a MQTT will.
 
@@ -41,21 +46,23 @@ MQTT Message format
 The message format generated is a JSON encoded object with the following members:
 
 * val - the actual value, in numeric format
-* knx_src_addr - when sending message, knx2mqtt fills in the source EIB address of the group write which triggered the message.
-  This field is ignored on incoming messages.
-* ack - when sending messages, knx2mqtt sets this to _true_. If this is set to _true_ on incoming messages, they
-  are ignored, to avoid loops.
- 
- 
-DPT Guessing
-------------
-The interpretation of KNX values is not specified as part of the wire protocol, but done by the device configuration.
-This is called a Datapoint Type or DPT. knx2mqtt guesses the DPT of outgoing messages by looking at the numeric value:
+* knx_src_addr - when sending message, knx2mqtt fills in the source EIB address of the group write which 
+  triggered the message. This field is ignored on incoming messages.
+* knx_textual - a textual representation of the value, or the numeric value with a unit specififer (e.g. "100%")
 
-* if the value contains a decimal point and has a fractional part, a 2 byte float is assumed
-* otherwise, if the value is 0, a boolean _false_ is assumed
-* otherwise, if the value is 1, a boolean _true_ is assumed
-* otherwise, a 8 bit scaled integer is assumed
+
+DPT Definitions
+--------------- 
+The interpretation of KNX values is not specified as part of the wire protocol, but done by the device configuration.
+It is therefore important for knx2mqtt to know about the datapoint definition of a group address.
+
+The easiest way to archieve this is to specify a ETS4 exported project file (.knxproj). knx2mqtt will read and parse this
+both for the group address names and data point types. A multi-level approach to determining the data point type is
+used, with the ultimate fallback being the data size in bits. It is recommended to always define DPTs in your ETS4
+projects, notably when converting ETS3 projects, which did not have those definitions at all.
+
+Special treatment is given to boolean DPTs: Instead of translating them into their textual representations, they
+are transfered (and accepted) as numeric "0" and "1" values. 
 
 
 Usage
@@ -86,11 +93,11 @@ Examples:
   IP address (interface) to use for originating EIBnet/IP messages. No default, mainly useful
   in ROUTING mode to specify the multicast interface.
   
-- knx.groupaddresstable
+- knx.ets4projectfile
 
-  A ETS4 group address export file in XML format. No default. If specified, received group addresses
-  are translated to their assigned names before they are published.
-
+  A ETS4 exported projectfile. No default. Will be used to determine group address names
+  and DPTs. 
+  
 - mqtt.broker
 
   ServerURI of the MQTT broker to connect to. Defaults to "tcp://localhost:1883".
@@ -111,6 +118,13 @@ See also
   
 Changelog
 ---------
+* 0.5 - 2015/01/28 - owagner
+  - now capable of reading ETS4 project files to determine both group address names and
+    their DPT values. Obsoletes "knx.groupaddressfile"
+  - now properly converts incoming and outgoing messages according to the specified
+    data point values.
+  - includes JSON attribute "knx_textual" with a textual representation of the DPT value
+
 * 0.4 - 2015/01/25 - owagner
   - adapted to new mqtt-smarthome topic hierarchy scheme: /status/ for reports, /set/ for setting values
   - prefix/connected is now an enum (0 - disconnected, 1 - connected to broker, 2 - connected to KNX bus)
