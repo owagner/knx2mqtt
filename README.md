@@ -110,6 +110,11 @@ Examples:
 
   The topic prefix used for publishing and subscribing. Defaults to "knx/".
 
+When running knx2mqtt on a server class machine, it makes sense to limit the memory usage
+to 64MB using the java options
+
+    -Xmx64M
+    
 
 See also
 --------
@@ -118,6 +123,10 @@ See also
   
 Changelog
 ---------
+* 0.6 - 2015/01/29 - owagner
+  - use a SoftReference to cache XML documents during project file loading, to reduce initial
+    memory impact
+
 * 0.5 - 2015/01/28 - owagner
   - now capable of reading ETS4 project files to determine both group address names and
     their DPT values. Obsoletes "knx.groupaddressfile"

@@ -1,6 +1,7 @@
 package com.tellerulam.knx2mqtt;
 
 import java.io.*;
+import java.lang.ref.*;
 import java.util.*;
 import java.util.logging.*;
 import java.util.regex.*;
@@ -81,7 +82,7 @@ public class GroupAddressManager
 		public String getTextutal()
 		{
 			String textual;
-			xlator.setAppendUnit(true);;
+			xlator.setAppendUnit(true);
 			textual=xlator.getValue();
 			xlator.setAppendUnit(false);
 			return textual;
@@ -307,12 +308,17 @@ public class GroupAddressManager
 	/*
 	 * We manage a cache of preparsed device descriptions
 	 */
-	private static Map<String,Document> docCache;
+	private static Map<String,SoftReference<Document>> docCache;
 	private static Document getDocument(ZipFile zf, DocumentBuilder docBuilder, String filename) throws SAXException, IOException
 	{
 		if(docCache==null)
 			docCache=new HashMap<>();
-		Document doc=docCache.get(filename);
+		Document doc;
+		SoftReference<Document> docref=docCache.get(filename);
+		if(docref!=null)
+			doc=docref.get();
+		else
+			doc=null;
 		if(doc==null)
 		{
 			ZipEntry ze=zf.getEntry(filename);
@@ -326,7 +332,7 @@ public class GroupAddressManager
 	        nlist=doc.getElementsByTagName("ComObject");
 	        for(int ix=0;ix<nlist.getLength();ix++)
 	        	((Element)nlist.item(ix)).setIdAttribute("Id", true);
-	        docCache.put(filename,doc);
+	        docCache.put(filename,new SoftReference<>(doc));
 		}
 		return doc;
 	}
