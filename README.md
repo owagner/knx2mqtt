@@ -123,6 +123,10 @@ See also
   
 Changelog
 ---------
+* 0.7 - 2015/03/02 - owagner
+  - added a syslog log handler which is active by default and can be overriden using
+    JUL properties
+    
 * 0.6 - 2015/01/29 - owagner
   - use a SoftReference to cache XML documents during project file loading, to reduce initial
     memory impact

@@ -181,6 +181,8 @@ public class GroupAddressManager
 			System.exit(1);
 		}
 		docCache=null;
+		// Hint at JVM to get rid of the cache
+		System.gc();
 	}
 
 	private static void storeGAInfo(String address,String name,String datapointType)
