@@ -20,7 +20,7 @@ Dependencies
 * Eclipse Paho: https://www.eclipse.org/paho/clients/java/ (used for MQTT communication)
 * Minimal-JSON: https://github.com/ralfstx/minimal-json (used for JSON creation and parsing)
 
-[![Build Status](https://travis-ci.org/mqtt-smarthome/knx2mqtt.svg)](https://travis-ci.org/mqtt-smarthome/knx2mqtt) Automatically built jars can be downloaded from the release page on GitHub at https://github.com/mqtt-smarthome/knx2mqtt/releases
+[![Build Status](https://travis-ci.org/owagner/knx2mqtt.svg)](https://travis-ci.org/owagner/knx2mqtt) Automatically built jars can be downloaded from the release page on GitHub at https://github.com/owagner/knx2mqtt/releases
 
 
 EIBD
@@ -98,7 +98,7 @@ Examples:
   A ETS4 exported projectfile. No default. Will be used to determine group address names
   and DPTs. 
   
-- mqtt.broker
+- mqtt.server
 
   ServerURI of the MQTT broker to connect to. Defaults to "tcp://localhost:1883".
   

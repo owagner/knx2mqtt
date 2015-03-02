@@ -7,7 +7,7 @@ deploy:
   file: "build/libs/knx2mqtt.jar"
   skip_cleanup: true
   on:
-    repo: mqtt-smarthome/knx2mqtt
+    repo: owagner/knx2mqtt
     tags: true
     all_branches: true
 
