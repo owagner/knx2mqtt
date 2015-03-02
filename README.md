@@ -98,7 +98,7 @@ Examples:
   A ETS4 exported projectfile. No default. Will be used to determine group address names
   and DPTs. 
   
-- mqtt.broker
+- mqtt.server
 
   ServerURI of the MQTT broker to connect to. Defaults to "tcp://localhost:1883".
   
