@@ -60,7 +60,7 @@ public class MQTTHandler
 
 	private boolean shouldBeConnected;
 
-	private void processSet(String namePart,MqttMessage msg)
+	private void processSetGet(String namePart,MqttMessage msg,boolean set)
 	{
 		if(msg.isRetained())
 		{
@@ -76,7 +76,10 @@ public class MQTTHandler
 		}
 		L.fine("Name "+namePart+" translates to GA "+gai.address);
 		String data=new String(msg.getPayload(),StandardCharsets.UTF_8);
-		KNXConnector.doGroupWrite(gai.address, data, gai);
+		if(set)
+			KNXConnector.doGroupWrite(gai.address, data, gai);
+		else
+			KNXConnector.doGroupRead(gai.address, data, gai);
 	}
 
 	void processMessage(String topic,MqttMessage msg)
@@ -84,7 +87,9 @@ public class MQTTHandler
 		L.fine("Received "+msg+" to "+topic);
 		topic=topic.substring(topicPrefix.length(),topic.length());
 		if(topic.startsWith("set/"))
-			processSet(topic.substring(4),msg);
+			processSetGet(topic.substring(4),msg,true);
+		else if(topic.startsWith("get/"))
+			processSetGet(topic.substring(4),msg,false);
 	}
 
 
@@ -99,10 +104,11 @@ public class MQTTHandler
 		{
 			mqttc.connect(copts);
 			setKNXConnectionState(false);
-			L.info("Successfully connected to broker, subscribing to "+topicPrefix+"set/#");
+			L.info("Successfully connected to broker, subscribing to "+topicPrefix+"(set|get)/#");
 			try
 			{
 				mqttc.subscribe(topicPrefix+"set/#",1);
+				mqttc.subscribe(topicPrefix+"get/#",1);
 				shouldBeConnected=true;
 			}
 			catch(MqttException mqe)

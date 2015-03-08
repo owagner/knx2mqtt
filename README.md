@@ -123,6 +123,9 @@ See also
   
 Changelog
 ---------
+* 0.8 - 2015/03/08 - owagner
+  - support /get/ function, which issues a KNX Group Read
+    
 * 0.7 - 2015/03/02 - owagner
   - added a syslog log handler which is active by default and can be overriden using
     JUL properties

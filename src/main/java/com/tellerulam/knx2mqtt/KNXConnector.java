@@ -166,9 +166,10 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 		}
 
 		@Override
-		public void groupReadResponse(ProcessEvent arg0)
+		public void groupReadResponse(ProcessEvent pe)
 		{
-			/* Ignore */
+			/* Handle this like a GroupWrite */
+			groupWrite(pe);
 		}
 
 	}
@@ -190,9 +191,14 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 				L.log(Level.WARNING,"Error in KNX connection, will retry in 10s",e);
 				try
 				{
-					Thread.sleep(10*1000);
+					Thread.sleep(5*1000);
+					if(pc!=null)
+						pc.detach();
+					if(link!=null)
+						link.close();
+					Thread.sleep(5*1000);
 				}
-				catch(InterruptedException e1)
+				catch(Exception e1)
 				{
 					/* Ignore */
 				}
@@ -213,6 +219,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 	}
 
 	/* This is straight from Calimero / ProcessCommunicatorImpl */
+	private static final int GROUP_READ = 0x00;
 	private static final int GROUP_WRITE = 0x80;
 	private static byte[] createGroupAPDU(final int service, final DPTXlator t)
 	{
@@ -255,4 +262,19 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 			conn.L.log(Level.WARNING,"Error when writing "+val+" to "+gaspec,e);
 		}
 	}
+
+	public static void doGroupRead(String gaspec,String val,GroupAddressInfo gai)
+	{
+		try
+		{
+			GroupAddress ga=new GroupAddress(gaspec);
+			conn.link.sendRequestWait(ga, Priority.LOW, DataUnitBuilder.createCompactAPDU(GROUP_READ, null));
+			conn.L.log(Level.INFO,"Sent read request for "+gaspec);
+		}
+		catch(Exception e)
+		{
+			conn.L.log(Level.WARNING,"Error when reading from "+gaspec,e);
+		}
+	}
+
 }
