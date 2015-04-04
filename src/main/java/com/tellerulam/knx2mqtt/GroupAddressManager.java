@@ -48,7 +48,15 @@ public class GroupAddressManager
 		}
 		void createTranslator() throws KNXException
 		{
-			xlator=TranslatorTypes.createTranslator(0, dpt);
+			try
+			{
+				xlator=TranslatorTypes.createTranslator(0, dpt);
+			}
+			catch(KNXException e)
+			{
+				L.warning("WARNING! Unable to create translator for DPT "+dpt+" of "+name+", using 1-byte-value as a fallback.");
+				xlator=TranslatorTypes.createTranslator(0,"5.005");
+			}
 			xlator.setAppendUnit(false);
 		}
 		public Object translate(byte[] asdu)
@@ -196,7 +204,7 @@ public class GroupAddressManager
 			gaTable.put(ga,gai);
 			gaByName.put(name,gai);
 		}
-		Pattern p=Pattern.compile("DPST-([0-9]+)(-([0-9]+))?");
+		Pattern p=Pattern.compile("DPS?T-([0-9]+)(-([0-9]+))?");
 		Matcher m=p.matcher(datapointType);
 		if(!m.find())
 			throw new IllegalArgumentException("Unparsable DPST '"+datapointType+"'");
@@ -270,41 +278,43 @@ public class GroupAddressManager
 	private static void processETS4GroupAddressConnections(ZipFile zf, Document doc,DocumentBuilder docBuilder, String id, String address, String name) throws SAXException, IOException
 	{
 		final String connectTypes[]=new String[]{"Send","Receive"};
-		boolean foundConnection=false,foundDPT=false;
-		for(String connectType:connectTypes)
+		boolean foundConnection=false;
+		for(int useObjectSize=0;useObjectSize<=1;useObjectSize++)
 		{
-			NodeList connectors=doc.getElementsByTagName(connectType);
-	        for(int ix=0;ix<connectors.getLength();ix++)
-	        {
-	        	Element e=(Element)connectors.item(ix);
-	        	if(id.equals(e.getAttribute("GroupAddressRefId")))
-	        	{
-	        		Element pe=(Element)e.getParentNode().getParentNode();
-	        		if(!"ComObjectInstanceRef".equals(pe.getNodeName()))
-        			{
-	        			L.warning("Weird project structure -- connection not owned by a ComObjectInstanceRef, but "+pe.getNodeName());
-	        			continue;
-        			}
-	        		foundConnection=true;
+			for(String connectType:connectTypes)
+			{
+				NodeList connectors=doc.getElementsByTagName(connectType);
+		        for(int ix=0;ix<connectors.getLength();ix++)
+		        {
+		        	Element e=(Element)connectors.item(ix);
+		        	if(id.equals(e.getAttribute("GroupAddressRefId")))
+		        	{
+		        		Element pe=(Element)e.getParentNode().getParentNode();
+		        		if(!"ComObjectInstanceRef".equals(pe.getNodeName()))
+	        			{
+		        			L.warning("Weird project structure -- connection not owned by a ComObjectInstanceRef, but "+pe.getNodeName());
+		        			continue;
+	        			}
+		        		foundConnection=true;
 
-	        		/* Perhaps we're lucky and someone specified it in the CombObjectInstanceRef? */
-	        		String dpt=e.getAttribute("DatapointType");
-	        		if(dpt.length()!=0)
-	        		{
-	        			storeGAInfo(address, name, dpt);
-	        			return;
-	        		}
-	        		/* No luck, no luck. Dig deeper */
-	        		if(processETS4GroupConnection(zf, doc, docBuilder, pe.getAttribute("RefId"),id, address, name))
-	        			foundDPT=true;
-	        		return;
-	        	}
-	        }
+		        		/* Perhaps we're lucky and someone specified it in the CombObjectInstanceRef? */
+		        		String dpt=pe.getAttribute("DatapointType");
+		        		if(dpt.length()!=0)
+		        		{
+		        			storeGAInfo(address, name, dpt);
+		        			return;
+		        		}
+		        		/* No luck, no luck. Dig deeper */
+		        		if(processETS4GroupConnection(zf, doc, docBuilder, pe.getAttribute("RefId"),id, address, name, useObjectSize==1))
+		        			return;
+		        	}
+		        }
+			}
 		}
 		if(!foundConnection)
 			L.info("Group "+id+"/"+address+"/"+name+" does not seem to be connected to anywhere, ignoring it");
-		else if(!foundDPT)
-			throw new IllegalArgumentException("Unable to determine datapoint type for "+id);
+		else
+			throw new IllegalArgumentException("Unable to determine datapoint type for "+id+"/"+address+"/"+name);
 	}
 
 	/*
@@ -339,7 +349,7 @@ public class GroupAddressManager
 		return doc;
 	}
 
-	private static boolean processETS4GroupConnection(ZipFile zf, Document doc, DocumentBuilder docBuilder, String refId, String id, String address, String name) throws SAXException, IOException
+	private static boolean processETS4GroupConnection(ZipFile zf, Document doc, DocumentBuilder docBuilder, String refId, String id, String address, String name,boolean useObjectSize) throws SAXException, IOException
 	{
 		// Right, we need to look into the device description. Determine it's filename
 		String refIdParts[]=refId.split("_");
@@ -349,7 +359,7 @@ public class GroupAddressManager
 		if(cobjref==null)
 			throw new IllegalArgumentException("Unable to find ComObjectRef with Id "+refId+" in "+pathName);
 		// Perhaps the ComObjectRef
-		if(processETS4ComObj(cobjref,zf,doc,docBuilder,address,name))
+		if(processETS4ComObj(cobjref,zf,doc,docBuilder,address,name,useObjectSize))
 			return true;
 
 		String refco=cobjref.getAttribute("RefId");
@@ -357,13 +367,13 @@ public class GroupAddressManager
 		if(cobj==null)
 			throw new IllegalArgumentException("Unable to find ComObject with Id "+refco+" in "+pathName);
 
-		if(processETS4ComObj(cobj,zf,doc,docBuilder,address,name))
+		if(processETS4ComObj(cobj,zf,doc,docBuilder,address,name,useObjectSize))
 			return true;
 
 		return false;
 	}
 
-	private static boolean processETS4ComObj(Element cobj, ZipFile zf, Document doc, DocumentBuilder docBuilder, String address, String name) throws SAXException, IOException
+	private static boolean processETS4ComObj(Element cobj, ZipFile zf, Document doc, DocumentBuilder docBuilder, String address, String name,boolean useObjectSize) throws SAXException, IOException
 	{
 		String dpt=cobj.getAttribute("DatapointType");
 		if(dpt.length()!=0)
@@ -371,14 +381,17 @@ public class GroupAddressManager
 			storeGAInfo(address, name, dpt);
 			return true;
 		}
-		String objSize=cobj.getAttribute("ObjectSize");
-		if(objSize.length()!=0)
+		if(useObjectSize)
 		{
-			// "1 Bit" is pretty unambigious -- no warning for that
-			if(!"1 Bit".equals(objSize))
-				L.warning("Warning: Infering DPT for "+new GroupAddress(Integer.parseInt(address))+" ("+name+") by objSize "+objSize+" - this is not good, please update your ETS4 project with proper DPT specifications!");
-			storeGAInfo(address, name, inferDPTFromObjectSize(zf, docBuilder, objSize));
-			return true;
+			String objSize=cobj.getAttribute("ObjectSize");
+			if(objSize.length()!=0)
+			{
+				// "1 Bit" is pretty unambigious -- no warning for that
+				if(!"1 Bit".equals(objSize))
+					L.warning("Warning: Infering DPT for "+new GroupAddress(Integer.parseInt(address))+" ("+name+") by objSize "+objSize+" - this is not good, please update your ETS4 project with proper DPT specifications!");
+				storeGAInfo(address, name, inferDPTFromObjectSize(zf, docBuilder, objSize));
+				return true;
+			}
 		}
 		return false;
 	}

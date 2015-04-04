@@ -268,7 +268,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 		try
 		{
 			GroupAddress ga=new GroupAddress(gaspec);
-			conn.link.sendRequestWait(ga, Priority.LOW, DataUnitBuilder.createCompactAPDU(GROUP_READ, null));
+			conn.link.sendRequestWait(ga, Priority.LOW, DataUnitBuilder.createLengthOptimizedAPDU(GROUP_READ, null));
 			conn.L.log(Level.INFO,"Sent read request for "+gaspec);
 		}
 		catch(Exception e)

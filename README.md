@@ -5,6 +5,7 @@ knx2mqtt
   
   Provided under the terms of the MIT license.
 
+
 Overview
 --------
 knx2mqtt is a gateway between a KNX bus interface and MQTT. It receives group telegrams and publishes them as MQTT topics, and similarily subscribes to MQTT topics and converts them into KNX group writes.
@@ -16,7 +17,7 @@ See https://github.com/mqtt-smarthome for a rationale and architectural overview
 Dependencies
 ------------
 * Java 1.7 SE Runtime Environment: https://www.java.com/
-* Calimero 2.2.0 or newer: https://github.com/calimero-project/calimero / https://www.auto.tuwien.ac.at/a-lab/calimero.html (used for KNX communication)
+* Calimero 2.2.1-beta or newer: https://github.com/calimero-project/calimero / https://www.auto.tuwien.ac.at/a-lab/calimero.html (used for KNX communication)
 * Eclipse Paho: https://www.eclipse.org/paho/clients/java/ (used for MQTT communication)
 * Minimal-JSON: https://github.com/ralfstx/minimal-json (used for JSON creation and parsing)
 
@@ -111,9 +112,9 @@ Examples:
   The topic prefix used for publishing and subscribing. Defaults to "knx/".
 
 When running knx2mqtt on a server class machine, it makes sense to limit the memory usage
-to 64MB using the java options
+to 128MB using the java options
 
-    -Xmx64M
+    -Xmx128M
     
 
 See also
@@ -123,6 +124,15 @@ See also
   
 Changelog
 ---------
+* 0.9 - 2015/04/04 - owagner
+  - fixed bug in ETS4 project reader which would not find a datapoint definition at the ComObject level
+  - fixed another bug which would except over DPT definitions (vs. DPST definitions)
+  - made project file parsing more robust in case only some connections into a GA had
+    DPT definitions
+  - added a fallback when hitting a DPT for which Calimero does not yet have a translator (for example, 
+    20.103 HVAC mode). In that case, a 5.005 translator (one byte integer) fallback is used.
+  - build updated to use Calimero 2.2.1-beta 
+  
 * 0.8 - 2015/03/08 - owagner
   - support /get/ function, which issues a KNX Group Read
     
@@ -152,6 +162,3 @@ Changelog
   
 * 0.2 - 2015/01/02 - owagner
   - converted to Gradle build
-      
-
- 
