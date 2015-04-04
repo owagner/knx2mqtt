@@ -130,7 +130,7 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 					}
 					else if(asdu.length==2)
 					{
-						val=Float.valueOf(asFloat(pe));
+						val=Double.valueOf(asFloat(pe,false));
 						dpt="9.001";
 					}
 					else
