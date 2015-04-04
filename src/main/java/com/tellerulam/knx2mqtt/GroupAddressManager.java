@@ -181,7 +181,7 @@ public class GroupAddressManager
 			}
 			for(GroupAddressInfo gai:gaTable.values())
 				gai.createTranslator();
-			L.info("Group address table: "+gaTable);
+			L.config("Group address table: "+gaTable);
 		}
 		catch(Exception e)
 		{
@@ -232,6 +232,7 @@ public class GroupAddressManager
 	private static void processETS4ProjectFile(ZipFile zf, ZipEntry zep) throws ParserConfigurationException, SAXException, IOException
 	{
         DocumentBuilderFactory docBuilderFactory=DocumentBuilderFactory.newInstance();
+        docBuilderFactory.setCoalescing(true);
         DocumentBuilder docBuilder=docBuilderFactory.newDocumentBuilder();
         Document doc=docBuilder.parse(zf.getInputStream(zep));
         NodeList gas=doc.getElementsByTagName("GroupAddress");
