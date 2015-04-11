@@ -30,12 +30,15 @@ public class GroupAddressManager
 		return gaByName.get(name);
 	}
 
-	public static class GroupAddressInfo
+	public static class GroupAddressInfo implements Serializable
 	{
+		private static final long serialVersionUID=1;
+
 		final String name;
 		final String address;
 		String dpt;
-		DPTXlator xlator;
+		/* We do not want this serialized, but recreate it explicitely on loading */
+		transient DPTXlator xlator;
 		private GroupAddressInfo(String name,String address)
 		{
 			this.name=name;
@@ -96,8 +99,8 @@ public class GroupAddressManager
 			return textual;
 		}
 	}
-	static private final Map<String,GroupAddressInfo> gaTable=new HashMap<>();
-	static private final Map<String,GroupAddressInfo> gaByName=new HashMap<>();
+	static private Map<String,GroupAddressInfo> gaTable=new HashMap<>();
+	static private Map<String,GroupAddressInfo> gaByName=new HashMap<>();
 
 	/**
 	 * Load an ETS4 Group Address Export
@@ -152,14 +155,46 @@ public class GroupAddressManager
 	/**
 	 * Load an ETS4 project file
 	 */
+	@SuppressWarnings("unchecked")
 	static void loadETS4Project()
 	{
 		String gaFile=System.getProperty("knx2mqtt.knx.ets4projectfile");
 		if(gaFile==null)
 		{
-			L.config("No project file specified");
+			L.config("No ETS4 project file specified");
 			return;
 		}
+		File projectFile=new File(gaFile);
+		if(!projectFile.exists())
+		{
+			L.severe("ETS4 project file "+gaFile+" does not exit");
+			System.exit(1);
+		}
+		File cacheFile=new File(gaFile+".cache");
+		if(cacheFile.exists())
+		{
+			if(cacheFile.lastModified()>projectFile.lastModified())
+			{
+				try(ObjectInputStream ois=new ObjectInputStream(new FileInputStream(cacheFile)))
+				{
+					gaTable=(Map<String, GroupAddressInfo>)ois.readObject();
+					gaByName=(Map<String, GroupAddressInfo>)ois.readObject();
+					for(GroupAddressInfo gai:gaTable.values())
+						gai.createTranslator();
+					L.config("Read group address table from "+cacheFile+": "+gaTable);
+					return;
+				}
+				catch(Exception e)
+				{
+					L.log(Level.WARNING, "Error reading cache file "+cacheFile+", ignoring it",e);
+				}
+			}
+			else
+			{
+				L.info("Cache file "+cacheFile+" exists, but project file is newer, ignoring it");
+			}
+		}
+		long startTime=System.currentTimeMillis();
 		try(ZipFile zf=new ZipFile(gaFile))
 		{
 			// Find the project file
@@ -181,12 +216,22 @@ public class GroupAddressManager
 			}
 			for(GroupAddressInfo gai:gaTable.values())
 				gai.createTranslator();
-			L.config("Group address table: "+gaTable);
+			long totalTime=System.currentTimeMillis()-startTime;
+			L.config("Reading group address table took "+totalTime+"ms: "+gaTable);
 		}
 		catch(Exception e)
 		{
 			L.log(Level.SEVERE, "Error reading project file "+gaFile,e);
 			System.exit(1);
+		}
+		try(ObjectOutputStream oos=new ObjectOutputStream(new FileOutputStream(cacheFile)))
+		{
+			oos.writeObject(gaTable);
+			oos.writeObject(gaByName);
+		}
+		catch(Exception e)
+		{
+			L.log(Level.INFO, "Unable to write project cache file "+cacheFile+". This does not impair functionality, but subsequent startups will not be faster",e);
 		}
 		docCache=null;
 		// Hint at JVM to get rid of the cache

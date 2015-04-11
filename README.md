@@ -52,18 +52,23 @@ The message format generated is a JSON encoded object with the following members
 * knx_textual - a textual representation of the value, or the numeric value with a unit specififer (e.g. "100%")
 
 
-DPT Definitions
---------------- 
+DPT Definitions and Project files
+---------------------------------
 The interpretation of KNX values is not specified as part of the wire protocol, but done by the device configuration.
 It is therefore important for knx2mqtt to know about the datapoint definition of a group address.
 
 The easiest way to archieve this is to specify a ETS4 exported project file (.knxproj). knx2mqtt will read and parse this
 both for the group address names and data point types. A multi-level approach to determining the data point type is
 used, with the ultimate fallback being the data size in bits. It is recommended to always define DPTs in your ETS4
-projects, notably when converting ETS3 projects, which did not have those definitions at all.
+projects, notably when converting ETS3 projects.
 
 Special treatment is given to boolean DPTs: Instead of translating them into their textual representations, they
 are transfered (and accepted) as numeric "0" and "1" values. 
+
+Since the parsing of parsing of the ETS4 project file is a memory- and CPU intensive process, the parsed information
+is started in a cache file (the project file with the suffix ".cache"). The cache file is completely optional;
+if it's not present, older than the project file or incompatible with this version of knx2mqtt, it's simply ignored
+and the usual project file parsing takes place.
 
 
 Usage
@@ -97,7 +102,8 @@ Examples:
 - knx.ets4projectfile
 
   A ETS4 exported projectfile. No default. Will be used to determine group address names
-  and DPTs. 
+  and DPTs. A pre-parsed cache of this file is stored under the same name with the suffix
+  ".cache".
   
 - mqtt.server
 
@@ -124,6 +130,9 @@ See also
   
 Changelog
 ---------
+* 0.10 - 2015/04/11 - owagner
+  - added caching of parsed project files to speed up startup esspecially on low-end CPUs
+  
 * 0.9 - 2015/04/04 - owagner
   - fixed bug in ETS4 project reader which would not find a datapoint definition at the ComObject level
   - fixed another bug which would except over DPT definitions (vs. DPST definitions)
