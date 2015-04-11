@@ -66,7 +66,7 @@ Special treatment is given to boolean DPTs: Instead of translating them into the
 are transfered (and accepted) as numeric "0" and "1" values. 
 
 Since the parsing of parsing of the ETS4 project file is a memory- and CPU intensive process, the parsed information
-is started in a cache file (the project file with the suffix ".cache"). The cache file is completely optional;
+is stored in a cache file (the project file with the suffix ".cache"). The cache file is completely optional;
 if it's not present, older than the project file or incompatible with this version of knx2mqtt, it's simply ignored
 and the usual project file parsing takes place.
 
