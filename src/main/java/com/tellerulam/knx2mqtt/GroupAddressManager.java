@@ -1,7 +1,6 @@
 package com.tellerulam.knx2mqtt;
 
 import java.io.*;
-import java.lang.ref.*;
 import java.util.*;
 import java.util.logging.*;
 import java.util.regex.*;
@@ -11,6 +10,7 @@ import javax.xml.parsers.*;
 
 import org.w3c.dom.*;
 import org.xml.sax.*;
+import org.xml.sax.helpers.*;
 
 import tuwien.auto.calimero.*;
 import tuwien.auto.calimero.dptxlator.*;
@@ -155,7 +155,6 @@ public class GroupAddressManager
 	/**
 	 * Load an ETS4 project file
 	 */
-	@SuppressWarnings("unchecked")
 	static void loadETS4Project()
 	{
 		String gaFile=System.getProperty("knx2mqtt.knx.ets4projectfile");
@@ -169,30 +168,6 @@ public class GroupAddressManager
 		{
 			L.severe("ETS4 project file "+gaFile+" does not exit");
 			System.exit(1);
-		}
-		File cacheFile=new File(gaFile+".cache");
-		if(cacheFile.exists())
-		{
-			if(cacheFile.lastModified()>projectFile.lastModified())
-			{
-				try(ObjectInputStream ois=new ObjectInputStream(new FileInputStream(cacheFile)))
-				{
-					gaTable=(Map<String, GroupAddressInfo>)ois.readObject();
-					gaByName=(Map<String, GroupAddressInfo>)ois.readObject();
-					for(GroupAddressInfo gai:gaTable.values())
-						gai.createTranslator();
-					L.config("Read group address table from "+cacheFile+": "+gaTable);
-					return;
-				}
-				catch(Exception e)
-				{
-					L.log(Level.WARNING, "Error reading cache file "+cacheFile+", ignoring it",e);
-				}
-			}
-			else
-			{
-				L.info("Cache file "+cacheFile+" exists, but project file is newer, ignoring it");
-			}
 		}
 		long startTime=System.currentTimeMillis();
 		try(ZipFile zf=new ZipFile(gaFile))
@@ -224,17 +199,9 @@ public class GroupAddressManager
 			L.log(Level.SEVERE, "Error reading project file "+gaFile,e);
 			System.exit(1);
 		}
-		try(ObjectOutputStream oos=new ObjectOutputStream(new FileOutputStream(cacheFile)))
-		{
-			oos.writeObject(gaTable);
-			oos.writeObject(gaByName);
-		}
-		catch(Exception e)
-		{
-			L.log(Level.INFO, "Unable to write project cache file "+cacheFile+". This does not impair functionality, but subsequent startups will not be faster",e);
-		}
-		docCache=null;
-		// Hint at JVM to get rid of the cache
+		// Hint at JVM to get rid of the caches
+		deviceDescriptionCache=null;
+		dptMap=null;
 		System.gc();
 	}
 
@@ -271,6 +238,7 @@ public class GroupAddressManager
 		gai.dpt=dptBuilder.toString();
 	}
 
+
 	/*
 	 * First step in parsing: find the GroupAddresses and their IDs
 	 */
@@ -284,7 +252,6 @@ public class GroupAddressManager
         for(int ix=0;ix<gas.getLength();ix++)
         {
         	Element e=(Element)gas.item(ix);
-
         	// Resolve the full "path" name of the group by going upwards in the GroupRanges
         	String name=null;
         	for(Element pe=e;;)
@@ -321,7 +288,7 @@ public class GroupAddressManager
 	/*
 	 * Find out what is connected to this group address
 	 */
-	private static void processETS4GroupAddressConnections(ZipFile zf, Document doc,DocumentBuilder docBuilder, String id, String address, String name) throws SAXException, IOException
+	private static void processETS4GroupAddressConnections(ZipFile zf, Document doc,DocumentBuilder docBuilder, String id, String address, String name) throws SAXException, IOException, ParserConfigurationException
 	{
 		final String connectTypes[]=new String[]{"Send","Receive"};
 		boolean foundConnection=false;
@@ -351,7 +318,7 @@ public class GroupAddressManager
 		        			return;
 		        		}
 		        		/* No luck, no luck. Dig deeper */
-		        		if(processETS4GroupConnection(zf, doc, docBuilder, pe.getAttribute("RefId"),id, address, name, useObjectSize==1))
+		        		if(processETS4GroupConnection(zf, pe.getAttribute("RefId"),id, address, name, useObjectSize==1))
 		        			return;
 		        	}
 		        }
@@ -363,86 +330,96 @@ public class GroupAddressManager
 			throw new IllegalArgumentException("Unable to determine datapoint type for "+id+"/"+address+"/"+name);
 	}
 
-	/*
-	 * We manage a cache of preparsed device descriptions
-	 */
-	private static Map<String,SoftReference<Document>> docCache;
-	private static Document getDocument(ZipFile zf, DocumentBuilder docBuilder, String filename) throws SAXException, IOException
+	private static Map<String,Map<String,Map<String,String>>> deviceDescriptionCache;
+	private static Map<Integer,String> dptMap;
+	private static SAXParserFactory saxFactory;
+
+	private static Map<String,Map<String,String>> loadDeviceDescription(ZipFile zf,String filename) throws ParserConfigurationException, SAXException, IOException
 	{
-		if(docCache==null)
-			docCache=new HashMap<>();
-		Document doc;
-		SoftReference<Document> docref=docCache.get(filename);
-		if(docref!=null)
-			doc=docref.get();
-		else
-			doc=null;
-		if(doc==null)
+		if(deviceDescriptionCache==null)
 		{
-			ZipEntry ze=zf.getEntry(filename);
-			if(ze==null)
-				throw new IllegalArgumentException("Unable to find device description "+filename);
-	        doc=docBuilder.parse(zf.getInputStream(ze));
-	        // Make sure we can use getElementById()
-	        NodeList nlist=doc.getElementsByTagName("ComObjectRef");
-	        for(int ix=0;ix<nlist.getLength();ix++)
-	        	((Element)nlist.item(ix)).setIdAttribute("Id", true);
-	        nlist=doc.getElementsByTagName("ComObject");
-	        for(int ix=0;ix<nlist.getLength();ix++)
-	        	((Element)nlist.item(ix)).setIdAttribute("Id", true);
-	        docCache.put(filename,new SoftReference<>(doc));
+			saxFactory = SAXParserFactory.newInstance();
+			deviceDescriptionCache=new HashMap<>();
 		}
-		return doc;
+		else
+		{
+			Map<String,Map<String,String>> cacheEntry=deviceDescriptionCache.get(filename);
+			if(cacheEntry!=null)
+				return cacheEntry;
+		}
+		ZipEntry ze=zf.getEntry(filename);
+		if(ze==null)
+			throw new IllegalArgumentException("Unable to find device description "+filename);
+		final Map<String,Map<String,String>> attrById=new HashMap<>();
+		SAXParser saxParser = saxFactory.newSAXParser();
+		DefaultHandler gaHandler=new DefaultHandler(){
+			@Override
+			public void startElement(String uri, String localName, String qName, Attributes attr) throws SAXException
+			{
+				if("ComObjectRef".equals(qName) || "ComObject".equals(qName))
+				{
+					// Convert the mutable Attributes object
+					Map<String,String> pattr=new HashMap<>();
+					for(int ix=0;ix<attr.getLength();ix++)
+						pattr.put(attr.getQName(ix),attr.getValue(ix));
+					attrById.put(pattr.get("Id"),pattr);
+				}
+			}
+		};
+		saxParser.parse(zf.getInputStream(ze),gaHandler);
+		deviceDescriptionCache.put(filename, attrById);
+		return attrById;
 	}
 
-	private static boolean processETS4GroupConnection(ZipFile zf, Document doc, DocumentBuilder docBuilder, String refId, String id, String address, String name,boolean useObjectSize) throws SAXException, IOException
+	private static boolean processETS4GroupConnection(ZipFile zf, String refId, String id, String address, String name,boolean useObjectSize) throws SAXException, IOException, ParserConfigurationException
 	{
 		// Right, we need to look into the device description. Determine it's filename
 		String refIdParts[]=refId.split("_");
 		String pathName=refIdParts[0]+"/"+refIdParts[0]+"_"+refIdParts[1]+".xml";
-		Document mdoc=getDocument(zf, docBuilder, pathName);
-		Element cobjref=mdoc.getElementById(refId);
+		Map<String,Map<String,String>> dev=loadDeviceDescription(zf,pathName);
+		Map<String,String> cobjref=dev.get(refId);
 		if(cobjref==null)
 			throw new IllegalArgumentException("Unable to find ComObjectRef with Id "+refId+" in "+pathName);
 		// Perhaps the ComObjectRef
-		if(processETS4ComObj(cobjref,zf,doc,docBuilder,address,name,useObjectSize))
+		if(processETS4ComObj(cobjref,zf,address,name,useObjectSize))
 			return true;
 
-		String refco=cobjref.getAttribute("RefId");
-		Element cobj=mdoc.getElementById(refco);
+		String refco=cobjref.get("RefId");
+		Map<String,String> cobj=dev.get(refco);
 		if(cobj==null)
 			throw new IllegalArgumentException("Unable to find ComObject with Id "+refco+" in "+pathName);
 
-		if(processETS4ComObj(cobj,zf,doc,docBuilder,address,name,useObjectSize))
+		if(processETS4ComObj(cobj,zf,address,name,useObjectSize))
 			return true;
 
 		return false;
 	}
 
-	private static boolean processETS4ComObj(Element cobj, ZipFile zf, Document doc, DocumentBuilder docBuilder, String address, String name,boolean useObjectSize) throws SAXException, IOException
+	private static boolean processETS4ComObj(Map<String,String> cobj, ZipFile zf, String address, String name,boolean useObjectSize) throws SAXException, IOException, ParserConfigurationException
 	{
-		String dpt=cobj.getAttribute("DatapointType");
-		if(dpt.length()!=0)
+		String dpt=cobj.get("DatapointType");
+		if(dpt!=null && dpt.length()!=0)
 		{
 			storeGAInfo(address, name, dpt);
 			return true;
 		}
 		if(useObjectSize)
 		{
-			String objSize=cobj.getAttribute("ObjectSize");
-			if(objSize.length()!=0)
+			String objSize=cobj.get("ObjectSize");
+			if(objSize!=null && objSize.length()!=0)
 			{
 				// "1 Bit" is pretty unambigious -- no warning for that
 				if(!"1 Bit".equals(objSize))
 					L.warning("Warning: Infering DPT for "+new GroupAddress(Integer.parseInt(address))+" ("+name+") by objSize "+objSize+" - this is not good, please update your ETS4 project with proper DPT specifications!");
-				storeGAInfo(address, name, inferDPTFromObjectSize(zf, docBuilder, objSize));
+				storeGAInfo(address, name, inferDPTFromObjectSize(zf, objSize));
 				return true;
 			}
 		}
 		return false;
 	}
 
-	private static String inferDPTFromObjectSize(ZipFile zf, DocumentBuilder docBuilder, String objSize) throws SAXException, IOException
+	@SuppressWarnings("boxing")
+	private static String inferDPTFromObjectSize(ZipFile zf, String objSize) throws SAXException, IOException, ParserConfigurationException
 	{
 		// Take a guess based on size
 		String dpitid=null;
@@ -455,24 +432,35 @@ public class GroupAddressManager
 			dpitid="9-1";
 		else
 		{
-			// Look up in knx_master table
-			Document master=getDocument(zf, docBuilder, "knx_master.xml");
-			NodeList allDPs=master.getElementsByTagName("DatapointType");
-			String sizeSpec[]=objSize.split(" ");
-			String bits=sizeSpec[0];
-			if(sizeSpec[1].startsWith("Byte"))
-				bits=String.valueOf(Integer.parseInt(bits)*8);
-			for(int ix=0;ix<allDPs.getLength();ix++)
+			if(dptMap==null)
 			{
-				Element e=(Element)allDPs.item(ix);
-				String dpSize=e.getAttribute("SizeInBit");
-				if(bits.equals(dpSize))
-				{
-					// Find the first subtype
-					Element subType=(Element)e.getElementsByTagName("DatapointSubtype").item(0);
-					return subType.getAttribute("Id");
-				}
+				dptMap=new HashMap<>();
+				SAXParser saxParser = saxFactory.newSAXParser();
+				DefaultHandler gaHandler=new DefaultHandler(){
+					private String currentSize;
+					@Override
+					public void startElement(String uri, String localName, String qName, Attributes attr) throws SAXException
+					{
+						if("DatapointType".equals(qName))
+						{
+							currentSize=attr.getValue("SizeInBit");
+						}
+						else if("DatapointSubtype".equals(qName))
+						{
+							if(currentSize!=null)
+							{
+								dptMap.put(Integer.valueOf(currentSize),attr.getValue("Id"));
+							}
+						}
+					}
+				};
+				saxParser.parse(zf.getInputStream(new ZipEntry("knx_master.xml")),gaHandler);
 			}
+			String sizeSpec[]=objSize.split(" ");
+			int bits=Integer.parseInt(sizeSpec[0]);
+			if(sizeSpec[1].startsWith("Byte"))
+				bits*=8;
+			return dptMap.get(bits);
 		}
 		return "DPST-"+dpitid;
 	}
