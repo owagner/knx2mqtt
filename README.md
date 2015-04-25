@@ -132,6 +132,7 @@ Changelog
 ---------
 * 0.10 - 2015/04/11 - owagner
   - added caching of parsed project files to speed up startup esspecially on low-end CPUs
+  - heavily speed up parser, partially using SAX instead of DOM
   
 * 0.9 - 2015/04/04 - owagner
   - fixed bug in ETS4 project reader which would not find a datapoint definition at the ComObject level
