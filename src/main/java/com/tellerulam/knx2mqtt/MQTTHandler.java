@@ -166,8 +166,8 @@ public class MQTTHandler
 			jso.add("knx_textual",textual);
 		if(val instanceof Integer)
 			jso.add("val",((Integer)val).intValue());
-		else if(val instanceof Float)
-			jso.add("val",((Float)val).floatValue());
+		else if(val instanceof Number)
+			jso.add("val",((Number)val).doubleValue());
 		else
 			jso.add("val",val.toString());
 		String txtmsg=jso.toString();
