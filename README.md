@@ -130,10 +130,11 @@ See also
   
 Changelog
 ---------
-* 0.11 - 2015/07/17 - owagner
+* 0.11 - 2015/07/18 - owagner
   - fixed float conversion to number. Previously, float values were added
     as strings to the JSON-encded object, possibly causing issues in logic engines
   - updated minimal-json to 0.9.2, calimero to 2.2.1 (final) and eclipse-paho to 1.0.2
+  - ignore intermediate syslog I/O errors
 
 * 0.10 - 2015/04/11 - owagner
   - added caching of parsed project files to speed up startup esspecially on low-end CPUs
