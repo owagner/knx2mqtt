@@ -17,7 +17,7 @@ See https://github.com/mqtt-smarthome for a rationale and architectural overview
 Dependencies
 ------------
 * Java 1.7 SE Runtime Environment: https://www.java.com/
-* Calimero 2.2.1-beta or newer: https://github.com/calimero-project/calimero / https://www.auto.tuwien.ac.at/a-lab/calimero.html (used for KNX communication)
+* Calimero (2.2.1): https://github.com/calimero-project/calimero / https://www.auto.tuwien.ac.at/a-lab/calimero.html (used for KNX communication)
 * Eclipse Paho: https://www.eclipse.org/paho/clients/java/ (used for MQTT communication)
 * Minimal-JSON: https://github.com/ralfstx/minimal-json (used for JSON creation and parsing)
 
