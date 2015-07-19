@@ -47,8 +47,12 @@ MQTT Message format
 The message format generated is a JSON encoded object with the following members:
 
 * val - the actual value, in numeric format
+* ts - timestamp, in milliseconds since Epoch, when this message was generated
+* lc - timestamp, in milliseconds since Epoch, when the value last changed (this is only accurate
+  over the runtime of an knx2mqtt instance; if knx2mqtt is restarted, all values will be assumed
+  to have changed when they are first received on the bus)
 * knx_src_addr - when sending message, knx2mqtt fills in the source EIB address of the group write which 
-  triggered the message. This field is ignored on incoming messages.
+  triggered the message
 * knx_textual - a textual representation of the value, or the numeric value with a unit specififer (e.g. "100%")
 
 
