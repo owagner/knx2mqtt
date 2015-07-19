@@ -117,6 +117,8 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 
 			GroupAddressInfo gaInfo=GroupAddressManager.getGAInfoForAddress(dest.toString());
 
+			long now=System.currentTimeMillis();
+
 			try
 			{
 				Object val;
@@ -139,11 +141,11 @@ public class KNXConnector extends Thread implements NetworkLinkListener
 						dpt="0.000";
 					}
 					L.info("Got "+val+" to unknown "+dest+" from "+src+" (ASDU length "+asdu.length+")");
-					MQTTHandler.publish(dest.toString(),val,src.toString(),dpt,null);
+					MQTTHandler.publish(dest.toString(),val,src.toString(),dpt,null,now,now);
 				}
 				else
 				{
-					MQTTHandler.publish(gaInfo.name,gaInfo.translate(asdu),src.toString(),gaInfo.dpt,gaInfo.getTextutal());
+					MQTTHandler.publish(gaInfo.name,gaInfo.translateAndStoreValue(asdu,now),src.toString(),gaInfo.dpt,gaInfo.getTextutal(),now,gaInfo.lastValueTimestamp);
 				}
 			}
 			catch(KNXException e)

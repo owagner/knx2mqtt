@@ -24,7 +24,7 @@ task listJars << {
 }
 
 jar {
-	from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } } {exclude "META-INF/**"}
+	from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } } { exclude "META-INF/**" }
 	archiveName 'knx2mqtt.jar'
 	manifest {
         attributes 	'Main-Class': 'com.tellerulam.knx2mqtt.Main',

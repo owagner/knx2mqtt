@@ -59,6 +59,7 @@ public class MQTTHandler
 	}
 
 	private boolean shouldBeConnected;
+	private static boolean knxConnectionState;
 
 	private void processSetGet(String namePart,MqttMessage msg,boolean set)
 	{
@@ -90,6 +91,8 @@ public class MQTTHandler
 			processSetGet(topic.substring(4),msg,true);
 		else if(topic.startsWith("get/"))
 			processSetGet(topic.substring(4),msg,false);
+		else
+			L.warning("Ignored message "+msg+" to unknown topic "+topic);
 	}
 
 
@@ -103,7 +106,7 @@ public class MQTTHandler
 		try
 		{
 			mqttc.connect(copts);
-			setKNXConnectionState(false);
+			sendConnectionState();
 			L.info("Successfully connected to broker, subscribing to "+topicPrefix+"(set|get)/#");
 			try
 			{
@@ -158,10 +161,10 @@ public class MQTTHandler
 		Main.t.schedule(new StateChecker(),30*1000,30*1000);
 	}
 
-	private void doPublish(String name, Object val, String src,String dpt,String textual)
+	private void doPublish(String name, Object val, String src,String dpt,String textual, long updateTime, long lastChange)
 	{
 		JsonObject jso=new JsonObject();
-		jso.add("knx_src_addr",src).add("knx_dpt",dpt);
+		jso.add("ts",updateTime).add("lc",lastChange).add("knx_src_addr",src).add("knx_dpt",dpt);
 		if(textual!=null)
 			jso.add("knx_textual",textual);
 		if(val instanceof Integer)
@@ -186,21 +189,28 @@ public class MQTTHandler
 		}
 	}
 
-	public static void setKNXConnectionState(boolean connected)
+	private void sendConnectionState()
 	{
 		try
 		{
-			instance.mqttc.publish(instance.topicPrefix+"connected",(connected?"2":"1").getBytes(),1,true);
+			instance.mqttc.publish(instance.topicPrefix+"connected",(knxConnectionState?"2":"1").getBytes(),1,true);
 		}
 		catch(MqttException e)
 		{
 			/* Ignore */
 		}
+
 	}
 
-	public static void publish(String name, Object val, String src,String dpt,String textual)
+	public static void setKNXConnectionState(boolean connected)
 	{
-		instance.doPublish(name,val,src,dpt,textual);
+		knxConnectionState=connected;
+		instance.sendConnectionState();
+	}
+
+	public static void publish(String name, Object val, String src,String dpt,String textual,long updateTime,long lastChange)
+	{
+		instance.doPublish(name,val,src,dpt,textual,updateTime,lastChange);
 	}
 
 }

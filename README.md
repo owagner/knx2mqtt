@@ -130,6 +130,10 @@ See also
   
 Changelog
 ---------
+* 0.12 - 2015/07/19 - owagner
+  - fix: topic/connected state was always 1 after a MQTT reconnect
+  - generate "ts" and "lc" timestamp fields in published messages
+
 * 0.11 - 2015/07/18 - owagner
   - fixed float conversion to number. Previously, float values were added
     as strings to the JSON-encded object, possibly causing issues in logic engines

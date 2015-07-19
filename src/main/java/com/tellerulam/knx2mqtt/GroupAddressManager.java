@@ -43,6 +43,11 @@ public class GroupAddressManager
 		 * loading
 		 */
 		transient DPTXlator xlator;
+		/*
+		 * Transient state, also not serialized
+		 */
+		transient Object lastValue;
+		transient long lastValueTimestamp;
 
 		private GroupAddressInfo(String name, String address)
 		{
@@ -70,7 +75,7 @@ public class GroupAddressManager
 			xlator.setAppendUnit(false);
 		}
 
-		public Object translate(byte[] asdu)
+		private Object translate(byte[] asdu)
 		{
 			xlator.setData(asdu);
 			if(xlator instanceof DPTXlatorBoolean)
@@ -97,6 +102,17 @@ public class GroupAddressManager
 					return strVal;
 				}
 			}
+		}
+
+		public Object translateAndStoreValue(byte[] asdu,long now)
+		{
+			Object newVal=translate(asdu);
+			if(!newVal.equals(lastValue))
+			{
+				lastValue=newVal;
+				lastValueTimestamp=now;
+			}
+			return newVal;
 		}
 
 		public String getTextutal()
