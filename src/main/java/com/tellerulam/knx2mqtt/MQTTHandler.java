@@ -181,7 +181,7 @@ public class MQTTHandler
 		{
 			String fullTopic=topicPrefix+"status/"+name;
 			mqttc.publish(fullTopic, msg);
-			L.info("Published "+txtmsg+" to "+fullTopic);
+			L.finer("Published "+txtmsg+" to "+fullTopic);
 		}
 		catch(MqttException e)
 		{
