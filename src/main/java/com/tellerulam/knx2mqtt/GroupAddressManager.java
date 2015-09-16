@@ -179,21 +179,23 @@ public class GroupAddressManager
 	}
 
 	/**
-	 * Load an ETS4 project file
+	 * Load an ETS4 or ETS5 project file
 	 */
 	@SuppressWarnings("unchecked")
 	static void loadETS4Project()
 	{
-		String gaFile = System.getProperty("knx2mqtt.knx.ets4projectfile");
+		String gaFile = System.getProperty("knx2mqtt.knx.ets5projectfile");
+		if(gaFile==null)
+			gaFile=System.getProperty("knx2mqtt.knx.ets4projectfile");
 		if(gaFile == null)
 		{
-			L.config("No ETS4 project file specified");
+			L.config("No ETS4/ETS5 project file specified");
 			return;
 		}
 		File projectFile = new File(gaFile);
 		if(!projectFile.exists())
 		{
-			L.severe("ETS4 project file " + gaFile + " does not exit");
+			L.severe("ETS4/ETS5 project file " + gaFile + " does not exit");
 			System.exit(1);
 		}
 		File cacheFile = new File(gaFile + ".cache");
@@ -228,7 +230,7 @@ public class GroupAddressManager
 			while(entries.hasMoreElements())
 			{
 				ZipEntry ze = entries.nextElement();
-				if(ze.getName().endsWith("Project.xml"))
+				if(ze.getName().toLowerCase().endsWith("project.xml"))
 				{
 					String projDir = ze.getName().substring(0, ze.getName().indexOf('/') + 1);
 					L.info("Found project directory " + projDir);
@@ -474,7 +476,7 @@ public class GroupAddressManager
 			{
 				// "1 Bit" is pretty unambigious -- no warning for that
 				if(!"1 Bit".equals(objSize))
-					L.warning("Warning: Infering DPT for " + new GroupAddress(Integer.parseInt(address)) + " (" + name + ") by objSize " + objSize + " - this is not good, please update your ETS4 project with proper DPT specifications!");
+					L.warning("Warning: Infering DPT for " + new GroupAddress(Integer.parseInt(address)) + " (" + name + ") by objSize " + objSize + " - this is not good, please update your ETS4/ETS project with proper DPT specifications!");
 				storeGAInfo(address, name, inferDPTFromObjectSize(zf, objSize));
 				return true;
 			}

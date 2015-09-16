@@ -104,9 +104,10 @@ Examples:
   in ROUTING mode to specify the multicast interface.
   
 - knx.ets4projectfile
+- knx.ets5projectfile
 
-  A ETS4 exported projectfile. No default. Will be used to determine group address names
-  and DPTs. A pre-parsed cache of this file is stored under the same name with the suffix
+  A ETS4 or ETS5 exported projectfile (".knxproj"). No default. Will be used to determine group address 
+  names and DPTs. A pre-parsed cache of this file is stored under the same name with the suffix
   ".cache".
   
 - mqtt.server
@@ -134,6 +135,12 @@ See also
   
 Changelog
 ---------
+* 0.13 - 2015/09/16 - owagner
+  - fix reading of ETS5 project files (trivial change)
+  - added knx.ets5projectfile as a new option for specifying the project file.
+    Currently aliases directly to ets4projectfile
+  - update minimal-json to 0.9.4
+  
 * 0.12 - 2015/07/19 - owagner
   - fix: topic/connected state was always 1 after a MQTT reconnect
   - generate "ts" and "lc" timestamp fields in published messages
